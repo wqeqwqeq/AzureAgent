@@ -1,0 +1,24 @@
+[project]
+name = "azure-agent"
+version = "0.1.0"
+description = "Azure management agent with AI capabilities"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "azure-identity>=1.23.0",
+    "azure-keyvault-secrets>=4.10.0",
+    "azure-mgmt-batch>=18.0.0",
+    "azure-mgmt-datafactory>=9.2.0",
+    "azure-mgmt-keyvault>=11.0.0",
+    "azure-mgmt-resource>=24.0.0",
+    "mcp>=1.10.1",
+    "openai-agents>=0.1.0",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "pyyaml>=6.0.2",
+    "requests>=2.32.4",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']

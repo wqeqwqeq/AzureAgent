@@ -1,0 +1,1 @@
+"""Prompt files for Resource-Lock agents will live here.""" 
