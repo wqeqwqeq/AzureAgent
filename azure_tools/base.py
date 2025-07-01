@@ -36,7 +36,7 @@ class AzureResourceBase:
         
         # Handle subscription_id independently
         if subscription_id is None:
-            subscription_id = SubscriptionResourceManager.get_subscription_id()
+            subscription_id = SubscriptionResourceManager.get_current_subscription_id()
         
         self.subscription_id = subscription_id
         

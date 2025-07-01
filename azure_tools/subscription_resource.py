@@ -32,7 +32,7 @@ class SubscriptionResourceManager:
         self.subscription_client = SubscriptionClient(credential=self.credential)
         
         # Handle subscription_id using SDK
-        self.subscription_id = subscription_id or SubscriptionResourceManager.get_subscription_id()
+        self.subscription_id = subscription_id or SubscriptionResourceManager.get_current_subscription_id()
         
         # Create resource management client
         self.resource_client = ResourceManagementClient(
@@ -42,9 +42,15 @@ class SubscriptionResourceManager:
 
 
     @staticmethod
-    def get_subscription_id():
+    def get_current_subscription_id():
         """Get the current subscription ID using Azure CLI"""
         cmd = "az account show --query id --output tsv"
+        return SubscriptionResourceManager.run_cmd(cmd).stdout.strip()
+    
+    @staticmethod
+    def get_current_subscription_name():
+        """Get the current subscription name using Azure CLI"""
+        cmd = "az account show --query name --output tsv"
         return SubscriptionResourceManager.run_cmd(cmd).stdout.strip()
 
     @staticmethod
@@ -89,7 +95,7 @@ class SubscriptionResourceManager:
             raise RuntimeError(f'No subscription called "{target_name}" was found')
         
         return subscription_id
-
+    # TODO: Can hardcode the subscription 
     def list_subscriptions(self):
         """
         List all subscriptions the signed-in identity can see.
