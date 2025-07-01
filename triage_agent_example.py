@@ -23,7 +23,7 @@ async def main():
     queries = [
         "List all subscriptions I have access to",
         "Switch to subscription 'Azure Subscription 1' and list resource groups",
-        "Show me all linked services in the Data Factory 'adf-stanley' in resource group 'SQL-RG'",
+        "Show me all linked services in the Data Factory 'adf-stanley' in resource group 'sql-rg'",
         "Test the connection for linked service 'Snowflake1' in the same Data Factory",
     ]
     

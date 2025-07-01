@@ -37,11 +37,15 @@ def switch_subscription(
         from azure_tools.subscription_resource import SubscriptionResourceManager
         result = SubscriptionResourceManager.switch_subscription(subscription_name_or_id)
         
-        # Store the subscription information in the shared context
-        ctx.context.subscription_id = result  # Assuming switch_subscription returns the subscription ID
-        ctx.context.subscription_name = subscription_name_or_id
+        # Get the actual subscription ID and name after switching
+        current_subscription_id = SubscriptionResourceManager.get_current_subscription_id()
+        current_subscription_name = SubscriptionResourceManager.get_current_subscription_name()
         
-        return f"Successfully switched to subscription: {subscription_name_or_id}"
+        # Store the correct subscription information in the shared context
+        ctx.context.subscription_id = current_subscription_id
+        ctx.context.subscription_name = current_subscription_name
+        
+        return f"Successfully switched to subscription: {current_subscription_name} ({current_subscription_id})"
     except Exception as e:
         return f"Error switching subscription: {str(e)}"
 
@@ -86,7 +90,7 @@ def list_rg_in_subscription(ctx: RunContextWrapper[AzureCtx]) -> str:
             {
                 "name": rg.name,
                 "location": rg.location,
-                "provisioning_state": rg.provisioning_state
+                "provisioning_state": getattr(rg, 'provisioning_state', 'Unknown')
             }
             for rg in resource_groups
         ]
@@ -172,6 +176,63 @@ def get_resource_guardrail_agent() -> Agent:
 # Guardrail functions
 async def resource_group_guardrail(ctx, agent, input_data):
     """Guardrail to check if the specified resource group exists."""
+    # Check if the input actually mentions resource groups or specific resources
+    input_text = str(input_data).lower()
+    
+    # Skip validation for general queries that don't mention specific resources
+    skip_phrases = [
+        "list all subscriptions",
+        "show subscriptions", 
+        "list subscriptions",
+        "switch to subscription",
+        "list resource groups",
+        "show resource groups",
+        "list all resource groups"
+    ]
+    
+    if any(phrase in input_text for phrase in skip_phrases):
+        # These queries don't require resource group validation
+        return GuardrailFunctionOutput(
+            output_info=ResourceGroupExistsOutput(
+                resource_group_exists=True,
+                reasoning="Query does not require resource group validation",
+                resource_group_name="N/A"
+            ),
+            tripwire_triggered=False,
+        )
+    
+    # If we already have a resource group in context and this query is about operations within it
+    # (like testing connections, listing services, etc.), skip validation
+    if (ctx.context.resource_group_name and 
+        any(phrase in input_text for phrase in [
+            "test the connection", "test connection", "list linked services", 
+            "show linked services", "in the same", "same data factory"
+        ])):
+        return GuardrailFunctionOutput(
+            output_info=ResourceGroupExistsOutput(
+                resource_group_exists=True,
+                reasoning=f"Using previously validated resource group: {ctx.context.resource_group_name}",
+                resource_group_name=ctx.context.resource_group_name
+            ),
+            tripwire_triggered=False,
+        )
+    
+    # Check if input mentions a resource group
+    rg_keywords = ["resource group", "resource-group", "rg "]
+    has_rg_mention = any(keyword in input_text for keyword in rg_keywords)
+    
+    if not has_rg_mention:
+        # No resource group mentioned, allow through
+        return GuardrailFunctionOutput(
+            output_info=ResourceGroupExistsOutput(
+                resource_group_exists=True,
+                reasoning="No specific resource group mentioned in query",
+                resource_group_name="N/A"
+            ),
+            tripwire_triggered=False,
+        )
+    
+    # Resource group is mentioned, validate it
     rg_agent = get_rg_guardrail_agent()
     result = await Runner.run(rg_agent, input_data, context=ctx.context)
     final_output = result.final_output_as(ResourceGroupExistsOutput)
@@ -188,6 +249,71 @@ async def resource_group_guardrail(ctx, agent, input_data):
 
 async def resource_exists_guardrail(ctx, agent, input_data):
     """Guardrail to check if the specified resource exists."""
+    # Check if the input actually mentions specific resources
+    input_text = str(input_data).lower()
+    
+    # Skip validation for general queries that don't mention specific resources
+    skip_phrases = [
+        "list all subscriptions",
+        "show subscriptions",
+        "list subscriptions", 
+        "switch to subscription",
+        "list resource groups",
+        "show resource groups",
+        "list all resource groups",
+        "list all resources",
+        "show all resources"
+    ]
+    
+    if any(phrase in input_text for phrase in skip_phrases):
+        # These queries don't require resource validation
+        return GuardrailFunctionOutput(
+            output_info=ResourceExistsOutput(
+                resource_exists=True,
+                reasoning="Query does not require specific resource validation",
+                resource_name="N/A",
+                resource_type="N/A"
+            ),
+            tripwire_triggered=False,
+        )
+    
+    # If we already have a resource in context and this query is about operations within it
+    # (like testing connections, listing services, etc.), skip validation
+    if (ctx.context.resource_name and 
+        any(phrase in input_text for phrase in [
+            "test the connection", "test connection", "list linked services", 
+            "show linked services", "in the same", "same data factory"
+        ])):
+        return GuardrailFunctionOutput(
+            output_info=ResourceExistsOutput(
+                resource_exists=True,
+                reasoning=f"Using previously validated resource: {ctx.context.resource_name}",
+                resource_name=ctx.context.resource_name,
+                resource_type="Microsoft.DataFactory/factories"  # Assume ADF based on context
+            ),
+            tripwire_triggered=False,
+        )
+    
+    # Check if input mentions specific resource types or names
+    resource_keywords = [
+        "data factory", "adf", "key vault", "batch account", 
+        "linked service", "pipeline", "trigger"
+    ]
+    has_resource_mention = any(keyword in input_text for keyword in resource_keywords)
+    
+    if not has_resource_mention:
+        # No specific resource mentioned, allow through
+        return GuardrailFunctionOutput(
+            output_info=ResourceExistsOutput(
+                resource_exists=True,
+                reasoning="No specific resource mentioned in query",
+                resource_name="N/A", 
+                resource_type="N/A"
+            ),
+            tripwire_triggered=False,
+        )
+    
+    # Specific resource is mentioned, validate it
     resource_agent = get_resource_guardrail_agent()
     result = await Runner.run(resource_agent, input_data, context=ctx.context)
     final_output = result.final_output_as(ResourceExistsOutput)
