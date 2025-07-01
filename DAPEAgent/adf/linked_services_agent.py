@@ -11,22 +11,17 @@ import json
 from pathlib import Path
 from typing import Optional
 
-from agents import Agent, OpenAIChatCompletionsModel, function_tool
+from agents import Agent, OpenAIChatCompletionsModel, function_tool, RunContextWrapper
 
-from DAPEAgent.agent_builder import  _build_client, load_yaml_prompt
-from DAPEAgent.utils.azure_adapters import get_resource_handler, Context
-
-# Global context storage - will be injected by the triage agent
-_ctx: Context = {}
-
-
-def _get_service():
-    """Get the ADFLinkedServices instance using current context."""
-    return get_resource_handler("adf.linked_services", **_ctx)
+from DAPEAgent.agent_builder import _build_client, load_yaml_prompt
+from DAPEAgent.utils.azure_adapters import get_resource_handler, AzureCtx
 
 
 @function_tool
-def list_linked_services(filter_by_type: Optional[str] = None) -> str:
+def list_linked_services(
+    ctx: RunContextWrapper[AzureCtx],
+    filter_by_type: Optional[str] = None
+) -> str:
     """
     List all linked services in the Azure Data Factory.
     
@@ -37,14 +32,18 @@ def list_linked_services(filter_by_type: Optional[str] = None) -> str:
         JSON string containing the list of linked services
     """
     try:
-        services = _get_service().list_linked_services(filter_by_type=filter_by_type)
+        service = get_resource_handler("adf.linked_services", ctx.context)
+        services = service.list_linked_services(filter_by_type=filter_by_type)
         return json.dumps(services, indent=2)
     except Exception as e:
         return f"Error listing linked services: {str(e)}"
 
 
 @function_tool
-def get_linked_service_details(linked_service_name: str) -> str:
+def get_linked_service_details(
+    ctx: RunContextWrapper[AzureCtx],
+    linked_service_name: str
+) -> str:
     """
     Get detailed information about a specific linked service.
     
@@ -55,7 +54,8 @@ def get_linked_service_details(linked_service_name: str) -> str:
         JSON string containing the linked service details
     """
     try:
-        service_details = _get_service().get_linked_service_details(linked_service_name)
+        service = get_resource_handler("adf.linked_services", ctx.context)
+        service_details = service.get_linked_service_details(linked_service_name)
         return json.dumps(service_details, indent=2)
     except Exception as e:
         return f"Error getting linked service details: {str(e)}"
@@ -63,6 +63,7 @@ def get_linked_service_details(linked_service_name: str) -> str:
 
 @function_tool
 def update_snowflake_linked_service(
+    ctx: RunContextWrapper[AzureCtx],
     linked_service_name: str,
     old_fqdn: str,
     new_fqdn: str,
@@ -81,7 +82,8 @@ def update_snowflake_linked_service(
         Status message about the update operation
     """
     try:
-        result = _get_service().update_linked_service_sf_account(
+        service = get_resource_handler("adf.linked_services", ctx.context)
+        result = service.update_linked_service_sf_account(
             linked_service_name=linked_service_name,
             old_fqdn=old_fqdn,
             new_fqdn=new_fqdn,
@@ -97,7 +99,10 @@ def update_snowflake_linked_service(
 
 
 @function_tool
-def test_linked_service_connection(linked_service_name: str) -> str:
+def test_linked_service_connection(
+    ctx: RunContextWrapper[AzureCtx],
+    linked_service_name: str
+) -> str:
     """
     Test the connection of a linked service.
     
@@ -108,7 +113,8 @@ def test_linked_service_connection(linked_service_name: str) -> str:
         Result of the connection test
     """
     try:
-        test_result = _get_service().test_linked_service_connection(linked_service_name)
+        service = get_resource_handler("adf.linked_services", ctx.context)
+        test_result = service.test_linked_service_connection(linked_service_name)
         
         if test_result.get("succeeded"):
             return f"Connection test successful for linked service '{linked_service_name}'"
@@ -119,19 +125,13 @@ def test_linked_service_connection(linked_service_name: str) -> str:
         return f"Error testing linked service connection: {str(e)}"
 
 
-def get_agent(context: Context) -> Agent:
+def get_agent() -> Agent:
     """
-    Create and return the ADF Linked Services agent with the given context.
-    
-    Args:
-        context: Dictionary containing subscription_id, resource_group_name, resource_name
+    Create and return the ADF Linked Services agent.
     
     Returns:
-        Configured Agent instance ready for use
+        Configured Agent instance ready for use with an AzureCtx context
     """
-    global _ctx
-    _ctx = context
-    
     # Load the prompt from the YAML file
     prompt_path = Path(__file__).parent / "prompts" / "linked_service_prompt.yaml"
     agent_config = load_yaml_prompt(prompt_path)
@@ -141,10 +141,9 @@ def get_agent(context: Context) -> Agent:
     return Agent(
         name="ADF Linked Services Specialist",
         model=OpenAIChatCompletionsModel(
-            model = model,
-            openai_client = _build_client(azure_deployment=model),
+            model=model,
+            openai_client=_build_client(azure_deployment=model),
         ),
-
         instructions=instructions,
         tools=[
             list_linked_services,
@@ -152,5 +151,5 @@ def get_agent(context: Context) -> Agent:
             update_snowflake_linked_service,
             test_linked_service_connection,
         ],
-        handoff_description= "You are a specialist in Azure Data Factory Linked Services. You are able to list, get details, update Snowflake linked services, and test linked service connections.",
+        handoff_description="You are a specialist in Azure Data Factory Linked Services. You are able to list, get details, update Snowflake linked services, and test linked service connections.",
     ) 

@@ -1,4 +1,67 @@
-# Azure Agent
+# Azure Agent Framework
+
+## 🎉 New: Improved Context Management
+
+The Azure Agent Framework now features automatic context management using the OpenAI Agents SDK's built-in context sharing mechanism. **No more manual context passing!**
+
+### Key Improvements
+
+- **Natural Language Context Extraction**: The triage agent automatically extracts subscription, resource group, and resource names from natural language queries
+- **Shared Context**: All agents share the same context object using `RunContextWrapper[AzureCtx]`
+- **Automatic Population**: Context information is populated automatically as agents use tools and validate resources
+- **No Manual Configuration**: No need to manually specify subscription IDs or resource names upfront
+
+### Usage Example
+
+```python
+import asyncio
+from DAPEAgent.triage_agent import get_agent
+from DAPEAgent.utils.azure_adapters import AzureCtx
+from agents import Runner
+
+async def main():
+    # Create empty context - LLM will populate it automatically
+    ctx = AzureCtx()
+    
+    # Get triage agent (no context parameter needed!)
+    triage = get_agent()
+    
+    # Natural language query - no manual context required
+    result = await Runner.run(
+        triage, 
+        "Show me linked services in prod-adf in the ProductionRG resource group",
+        context=ctx
+    )
+    
+    print(f"Result: {result.final_output}")
+    # Context is now automatically populated:
+    print(f"Resource Group: {ctx.resource_group_name}")  # "ProductionRG"
+    print(f"Resource Name: {ctx.resource_name}")         # "prod-adf"
+
+asyncio.run(main())
+```
+
+### How It Works
+
+1. **User Input**: Natural language queries like "Switch to ContosoProd subscription and list linked services in adf-prod"
+2. **Context Extraction**: The triage agent extracts key information (subscription names, resource groups, resource names)
+3. **Automatic Storage**: Tools and guardrails automatically store validated information in the shared context
+4. **Agent Handoff**: Specialist agents receive the populated context automatically
+5. **Persistent Context**: Context persists throughout the conversation for seamless multi-step operations
+
+### Interactive Mode
+
+Run the example with interactive mode:
+
+```bash
+python triage_agent_example.py --interactive
+```
+
+This allows you to have natural conversations with the agent and see how context is automatically managed.
+
+---
+
+## Original README Content
 
 An AI-powered agent for managing Azure resources including Azure Data Factory, Batch, Key Vault, and Resource Locks.
 
