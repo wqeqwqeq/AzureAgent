@@ -1,12 +1,12 @@
 # Azure Agent Framework
 
-A sophisticated AI-powered agent system for managing Azure resources through natural language interactions. The framework uses a triage agent to intelligently route requests to specialized agents for Azure Data Factory, Key Vault, and other Azure services. Using OpenAI Agent SDK
+A sophisticated AI-powered agent system for managing Azure resources through natural language interactions. The framework uses a triage agent to intelligently route requests to specialized agents for Azure Data Factory, Key Vault, and other Azure services. Built with **OpenAI Agents SDK** and powered by **Azure AI Foundry** hosted models.
 
 ## 🏗️ Architecture
 
 The framework follows a **triage-based architecture** where:
 
-1. **Triage Agent**: Analyzes user requests and extracts Azure context (subscription, resource group, resource name)
+1. **Triage Agent**: Analyzes user requests and extracts Azure context (subscription, resource group, resource name) and handoff the tasks to the specialized agents
 2. **Specialist Agents**: Handle specific Azure service operations
 3. **Shared Context**: All agents share Azure authentication and resource context automatically
 
@@ -30,7 +30,24 @@ The framework follows a **triage-based architecture** where:
    uv sync
    ```
 
-3. Authenticate with Azure CLI:
+3. Set up environment configuration:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edit `.env` file with your Azure AI Foundry configuration:
+   ```env
+   # Azure AI Foundry Configuration
+   AZURE_OPENAI_ENDPOINT=https://your-foundry-endpoint.openai.azure.com/
+   AZURE_OPENAI_API_KEY=your-azure-openai-api-key
+   AZURE_OPENAI_API_VERSION=2024-02-15-preview
+   
+   # Optional: Default Azure context (can be overridden by agents)
+   AZURE_SUBSCRIPTION_ID=your-subscription-id
+   AZURE_RESOURCE_GROUP=your-default-resource-group
+   ```
+
+4. Authenticate with Azure CLI:
    ```bash
    az login
    ```
@@ -151,20 +168,44 @@ AzureAgent/
 
 ## 🔐 Authentication
 
-The framework uses Azure CLI authentication. Ensure you're logged in:
+The framework uses **dual authentication**:
+
+### 1. Azure AI Foundry (for AI Models)
+Configure your `.env` file with Azure AI Foundry credentials for model hosting:
+- **AZURE_OPENAI_ENDPOINT**: Your Azure AI Foundry endpoint
+- **AZURE_OPENAI_API_KEY**: API key for model access
+- **AZURE_OPENAI_API_VERSION**: API version (recommended: 2024-02-15-preview)
+
+### 2. Azure CLI (for Resource Management)
+Ensure you're logged in for Azure resource operations:
 
 ```bash
 az login
 ```
 
-The agents will automatically use your CLI credentials for Azure API calls.
+The agents will automatically use your CLI credentials for Azure resource API calls while leveraging Azure AI Foundry for intelligent responses.
 
 ## 📝 Configuration
 
+### Environment Configuration
+Create a `.env.example` file in your project root:
+
+```env
+# Azure AI Foundry Configuration
+AZURE_OPENAI_ENDPOINT=https://your-foundry-endpoint.openai.azure.com/
+AZURE_OPENAI_API_KEY=your-azure-openai-api-key
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+
+# Optional: Default Azure context (can be overridden by agents)
+AZURE_SUBSCRIPTION_ID=your-subscription-id
+AZURE_RESOURCE_GROUP=your-default-resource-group
+```
+
+### Agent Configuration
 Each agent is configured through YAML prompt files in `DAPEAgent/prompts/`:
 
 - **System prompts**: Define agent behavior and expertise
-- **Model configuration**: Specify which OpenAI model to use  
+- **Model configuration**: Specify which Azure AI Foundry hosted model to use (e.g., gpt-4.1-mini)
 - **Handoff descriptions**: Define how the triage agent should route requests
 
 ## 🚧 Extending the Framework
@@ -182,4 +223,4 @@ See `main-example.py` for a complete working example, or check the `end-to-end/`
 
 ---
 
-*Built with OpenAI Agents SDK and Azure SDK for Python*
+*Built with OpenAI Agents SDK and Azure SDK for Python • Powered by Azure AI Foundry*
