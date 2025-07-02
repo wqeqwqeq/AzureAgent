@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Union, List
+from typing import Dict, Optional, Union, List
 from datetime import datetime
 from ..base import AzureResourceBase
 from ..auth import AzureAuthentication
@@ -141,7 +141,7 @@ class ADFPipeline(AzureResourceBase):
             raise
 
     def run_and_fetch(
-        self, pipeline_name: str, activity_name: str = None, parameters: Dict = None,
+        self, pipeline_name: str, activity_name: str = None, parameters: Optional[Dict] = None,
     ):
         """
         Wrapper to run pipeline and fetch activity results.

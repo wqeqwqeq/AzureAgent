@@ -1,89 +1,33 @@
 # Azure Agent Framework
 
-## 🎉 New: Improved Context Management
+A sophisticated AI-powered agent system for managing Azure resources through natural language interactions. The framework uses a triage agent to intelligently route requests to specialized agents for Azure Data Factory, Key Vault, and other Azure services. Using OpenAI Agent SDK
 
-The Azure Agent Framework now features automatic context management using the OpenAI Agents SDK's built-in context sharing mechanism. **No more manual context passing!**
+## 🏗️ Architecture
 
-### Key Improvements
+The framework follows a **triage-based architecture** where:
 
-- **Natural Language Context Extraction**: The triage agent automatically extracts subscription, resource group, and resource names from natural language queries
-- **Shared Context**: All agents share the same context object using `RunContextWrapper[AzureCtx]`
-- **Automatic Population**: Context information is populated automatically as agents use tools and validate resources
-- **No Manual Configuration**: No need to manually specify subscription IDs or resource names upfront
+1. **Triage Agent**: Analyzes user requests and extracts Azure context (subscription, resource group, resource name)
+2. **Specialist Agents**: Handle specific Azure service operations
+3. **Shared Context**: All agents share Azure authentication and resource context automatically
 
-### Usage Example
+### Implemented Specialist Agents
 
-```python
-import asyncio
-from DAPEAgent.triage_agent import get_agent
-from DAPEAgent.utils.azure_adapters import AzureCtx
-from agents import Runner
+- **🔗 ADF Linked Services Agent**: Manage Azure Data Factory linked services
+- **⚙️ ADF Integration Runtime Agent**: Handle integration runtime operations  
+- **🔐 Key Vault Agent**: Retrieve and manage secrets from Azure Key Vault
 
-async def main():
-    # Create empty context - LLM will populate it automatically
-    ctx = AzureCtx()
-    
-    # Get triage agent (no context parameter needed!)
-    triage = get_agent()
-    
-    # Natural language query - no manual context required
-    result = await Runner.run(
-        triage, 
-        "Show me linked services in prod-adf in the ProductionRG resource group",
-        context=ctx
-    )
-    
-    print(f"Result: {result.final_output}")
-    # Context is now automatically populated:
-    print(f"Resource Group: {ctx.resource_group_name}")  # "ProductionRG"
-    print(f"Resource Name: {ctx.resource_name}")         # "prod-adf"
+## 🚀 Quick Start
 
-asyncio.run(main())
-```
+### Installation
 
-### How It Works
-
-1. **User Input**: Natural language queries like "Switch to ContosoProd subscription and list linked services in adf-prod"
-2. **Context Extraction**: The triage agent extracts key information (subscription names, resource groups, resource names)
-3. **Automatic Storage**: Tools and guardrails automatically store validated information in the shared context
-4. **Agent Handoff**: Specialist agents receive the populated context automatically
-5. **Persistent Context**: Context persists throughout the conversation for seamless multi-step operations
-
-### Interactive Mode
-
-Run the example with interactive mode:
-
-```bash
-python triage_agent_example.py --interactive
-```
-
-This allows you to have natural conversations with the agent and see how context is automatically managed.
-
----
-
-## Original README Content
-
-An AI-powered agent for managing Azure resources including Azure Data Factory, Batch, Key Vault, and Resource Locks.
-
-## Features
-
-- **Azure Data Factory**: Manage linked services, integration runtimes, triggers, pipelines, and managed private endpoints
-- **Azure Batch**: Scale pool nodes and manage batch operations
-- **Azure Key Vault**: Retrieve and manage secrets
-- **Resource Locks**: Manage resource locks at the resource group level
-- **AI Agent Integration**: Expose Azure operations as AI agent tools
-
-## Setup
-
-1. Install dependencies:
+1. Install uv package manager:
    ```bash
-   uv install
+   pip install uv
    ```
 
-2. Copy environment file and configure:
+2. Sync dependencies:
    ```bash
-   cp .env.sample .env
-   # Edit .env with your Azure credentials
+   uv sync
    ```
 
 3. Authenticate with Azure CLI:
@@ -91,38 +35,151 @@ An AI-powered agent for managing Azure resources including Azure Data Factory, B
    az login
    ```
 
-## Usage
+### Run Example
 
-### Direct Azure Tools
-
-```python
-from azure_tools import AzureAuthentication
-from azure_tools.adf import ADFLinkedServices
-
-# Shared authentication
-auth = AzureAuthentication()
-
-# Use ADF linked services
-adf_ls = ADFLinkedServices(
-    resource_group_name="my-rg",
-    resource_name="my-adf",
-    auth=auth
-)
-
-services = adf_ls.list_linked_services()
+```bash
+uv run main-example.py
 ```
 
-### AI Agent
+## 💬 Usage Examples
+
+### Natural Language Queries
+
+The triage agent understands natural language and automatically extracts Azure context:
 
 ```python
-from agent import AzureAgent
+import asyncio
+from agents import Runner, trace
+from DAPEAgent.triage_agent import get_triage_agent
+from DAPEAgent.config import AzureCtx
 
-agent = AzureAgent()
-response = agent.run("List all linked services in my ADF")
+async def main():
+    triage_agent = get_triage_agent()
+    
+    # The agent will automatically extract:
+    # - Key Vault name: "stanleyakvprod" 
+    # - Resource Group: "adf"
+    # - Operation: retrieve secrets
+    result = await Runner.run(
+        triage_agent,
+        input=[{"content": "what's the value for secret test-secret-2 and test-secret-1 in the key vault stanleyakvprod in resource group adf", "role": "user"}],
+        context=AzureCtx(subscription_id="ee5f77a1-2e59-4335-8bdf-f7ea476f6523")
+    )
+    
+    print("Agent Response:", result)
+
+asyncio.run(main())
 ```
 
-## Project Structure
+### Example Queries by Service
 
-- `azure_tools/`: Core Azure management utilities
-- `agent/`: AI agent integration layer
-- `tests/`: Unit and integration tests
+**Key Vault Operations:**
+- "Get the value of secret 'database-password' from vault 'prod-kv' in resource group 'production'"
+- "List all secrets in key vault 'dev-vault'"
+- "What's the value for secrets test-secret-1 and test-secret-2?"
+
+**ADF Linked Services:**
+- "List all linked services in data factory 'prod-adf'"
+- "Show details for linked service 'snowflake-prod'"
+- "Test connection for linked service 'sql-server-dev'"
+- "Update Snowflake FQDN from old.snowflake.com to new.snowflake.com in linked service 'sf-prod'"
+
+**ADF Integration Runtime:**
+- "List all integration runtimes in data factory 'prod-adf'"
+- "Show status of integration runtime 'AutoResolveIntegrationRuntime'"
+- "Get details for integration runtime 'self-hosted-ir'"
+
+## 🛠️ Available Tools
+
+### Key Vault Agent Tools
+- `get_secret_value`: Retrieve specific secret values
+- `list_secrets`: List all secrets in a Key Vault
+- `get_secret_details`: Get detailed information about a secret
+
+### ADF Linked Services Agent Tools
+- `list_linked_services`: List all linked services (with optional type filtering)
+- `get_linked_service_details`: Get detailed configuration of a specific linked service
+- `update_linked_service_sf_account`: Update Snowflake FQDN in linked services (with dry-run support)
+- `test_linked_service_connection`: Test if a linked service can connect successfully
+
+### ADF Integration Runtime Agent Tools
+- `list_integration_runtimes`: List all integration runtimes
+- `get_integration_runtime_details`: Get detailed information about a specific integration runtime
+- `get_integration_runtime_status`: Check the current status of an integration runtime
+
+### Triage Agent Tools
+- `set_azure_context`: Store and manage Azure resource context (subscription, resource group, resource name)
+
+## 🔧 Project Structure
+
+```
+AzureAgent/
+├── azure_tools/                 # Core Azure SDK wrappers
+│   ├── adf/                    # Azure Data Factory tools
+│   │   ├── integration_runtime_agent.py
+│   │   ├── linked_services_agent.py
+│   │   └── pipelines_agent.py
+│   ├── auth.py                 # Azure authentication
+│   ├── base.py                 # Base classes
+│   └── keyvault.py             # Key Vault operations
+├── DAPEAgent/                  # AI Agent framework
+│   ├── adf/                    # ADF specialist agents
+│   │   ├── integration_runtime_agent.py
+│   │   ├── linked_services_agent.py
+│   │   └── pipelines_agent.py
+│   ├── keyvault/               # Key Vault agents
+│   │   └── key_vault_agent.py
+│   ├── prompts/                # Agent prompts and configurations
+│   │   ├── triage_agent.yaml
+│   │   ├── key_vault_prompt.yaml
+│   │   ├── linked_service_prompt.yaml
+│   │   └── integration_runtime_prompt.yaml
+│   ├── agent_builder.py        # Agent factory utilities
+│   ├── config.py               # Azure context configuration
+│   └── triage_agent.py         # Main triage agent
+├── end-to-end/                 # End-to-end examples
+└── main-example.py             # Main example script
+```
+
+## 🎯 How It Works
+
+1. **Context Extraction**: The triage agent parses natural language to extract Azure resource information
+2. **Authentication**: Shared Azure authentication across all agents using Azure CLI credentials
+3. **Intelligent Routing**: Based on keywords and context, requests are routed to appropriate specialist agents
+4. **Tool Execution**: Specialist agents execute Azure operations using the extracted context
+5. **Result Formatting**: Results are returned in human-readable format with JSON details when needed
+
+## 🔐 Authentication
+
+The framework uses Azure CLI authentication. Ensure you're logged in:
+
+```bash
+az login
+```
+
+The agents will automatically use your CLI credentials for Azure API calls.
+
+## 📝 Configuration
+
+Each agent is configured through YAML prompt files in `DAPEAgent/prompts/`:
+
+- **System prompts**: Define agent behavior and expertise
+- **Model configuration**: Specify which OpenAI model to use  
+- **Handoff descriptions**: Define how the triage agent should route requests
+
+## 🚧 Extending the Framework
+
+To add new specialist agents:
+
+1. Create agent implementation in appropriate subfolder
+2. Add prompt configuration YAML file
+3. Register agent in `triage_agent.py`
+4. Update triage routing patterns in `triage_agent.yaml`
+
+## 📖 Examples
+
+See `main-example.py` for a complete working example, or check the `end-to-end/` directory for more advanced scenarios.
+
+---
+
+*Built with OpenAI Agents SDK and Azure SDK for Python*
