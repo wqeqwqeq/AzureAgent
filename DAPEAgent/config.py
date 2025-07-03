@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     az_openai_endpoint: str = Field(..., alias="AZURE_OPENAI_ENDPOINT")
     az_openai_deployment: str = Field("gpt-4.1", alias="AZURE_OPENAI_DEPLOYMENT")
     az_openai_api_version: str = Field("2024-05-01-preview", alias="AZURE_OPENAI_API_VERSION")
-    openai_trace_export_key: Optional[str] = Field(default=None, alias="OPENAI_TRACE_EXPORT_KEY")
+    openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
 
     class Config:
         env_file = ".env"            # auto-loads .env if present

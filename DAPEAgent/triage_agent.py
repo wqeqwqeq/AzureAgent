@@ -106,15 +106,27 @@ def load_triage_system_prompt() -> str:
     return prompt_data.get("system_prompt", "You are an Azure resource triage assistant.")
 
 
-def get_triage_agent() -> Agent[AzureCtx]:
+def get_triage_agent(use_mcp_server: bool = False, **kwargs) -> Agent[AzureCtx]:
+
+    yaml_path = Path(__file__).parent / "prompts" / "triage_agent.yaml"
+    prompt_data = load_yaml_prompt(yaml_path)
+
+    if use_mcp_server:
+        mcp_prompt = prompt_data.get("mcp_prompt", None)
+        system_prompt = prompt_data.get("system_prompt", "You are an Azure resource triage assistant.") + mcp_prompt
+    else:
+        system_prompt = prompt_data.get("system_prompt", "You are an Azure resource triage assistant.")
+
+    model = prompt_data.get("model", "gpt-4.1-mini")
+
     adf_linked_service_agent, _ = get_agent_adf_linked_services()
     adf_integration_runtime_agent, _ = get_agent_adf_integration_runtime()
     # adf_pipelines_agent, _ = get_agent_adf_pipelines()  
     keyvault_agent, _ = get_agent_key_vault()
     triage_agent = Agent[AzureCtx](
         name="Azure Triage Agent",
-        model=OpenAIChatCompletionsModel("gpt-4.1-mini", openai_client=_build_client()),
-        instructions=load_triage_system_prompt(),
+        model=OpenAIChatCompletionsModel(model, openai_client=_build_client()),
+        instructions=system_prompt,
         tools=[
             set_azure_context,
         ],
@@ -124,6 +136,7 @@ def get_triage_agent() -> Agent[AzureCtx]:
             # handoff(adf_pipelines_agent),
             handoff(keyvault_agent),
         ],
+        **kwargs
     )
     return triage_agent
 

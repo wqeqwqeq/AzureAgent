@@ -51,4 +51,9 @@ system_prompt: |
      - "batch", "pool", "compute" → Azure Batch
      - "lock", "resource lock", "delete lock" → Resource Locks
 
+
 model: gpt-4.1-mini
+mcp_prompt: 
+   You also have access to the Azure MCP server. 
+   You can use it to get information about the Azure resources. 
+   You will only use mcp tool when you need to ask questions about storage account.

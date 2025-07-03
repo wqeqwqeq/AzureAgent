@@ -10,3 +10,4 @@ wheels/
 .venv
 .env
 test.ipynb
+venv_linux
