@@ -2,6 +2,7 @@ from azure.mgmt.datafactory import DataFactoryManagementClient
 from azure.mgmt.batch import BatchManagementClient
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.resource.locks import ManagementLockClient
+from azure.storage.blob import BlobServiceClient
 from typing import Literal
 from .auth import AzureAuthentication
 from .subscription_resource import SubscriptionResourceManager
@@ -13,7 +14,7 @@ class AzureResourceBase:
         self,
         resource_group_name: str,
         resource_name: str,
-        resource_type: Literal["adf", "batch", "keyvault", "locks"],
+        resource_type: Literal["adf", "batch", "keyvault", "locks", "storage"],
         subscription_id: str = None,
         auth: AzureAuthentication = None,
     ):
@@ -22,8 +23,8 @@ class AzureResourceBase:
 
         Args:
             resource_group_name: Name of the resource group
-            resource_name: Name of the resource (ADF factory, Batch account, or Key Vault)
-            resource_type: Type of resource ('adf', 'batch', 'keyvault', or 'locks')
+            resource_name: Name of the resource (ADF factory, Batch account, Key Vault, or Storage account)
+            resource_type: Type of resource ('adf', 'batch', 'keyvault', 'locks', or 'storage')
             subscription_id: Azure subscription ID. If not provided, will be retrieved from environment or CLI
             auth: Optional AzureAuthentication instance. If not provided, creates a new one
         """
@@ -61,9 +62,14 @@ class AzureResourceBase:
             self.lock_client = ManagementLockClient(
                 credential=self.credential, subscription_id=self.subscription_id,
             )
+        elif self.resource_type == "storage":
+            self.blob_service_client = BlobServiceClient(
+                account_url=f"https://{resource_name}.blob.core.windows.net",
+                credential=self.credential,
+            )
         else:
             raise ValueError(
-                f"Unsupported resource type: {resource_type}. Must be 'adf', 'batch', 'keyvault', or 'locks'"
+                f"Unsupported resource type: {resource_type}. Must be 'adf', 'batch', 'keyvault', 'locks', or 'storage'"
             )
 
 

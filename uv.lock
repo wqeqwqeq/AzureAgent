@@ -45,6 +45,7 @@ dependencies = [
     { name = "azure-mgmt-datafactory" },
     { name = "azure-mgmt-keyvault" },
     { name = "azure-mgmt-resource" },
+    { name = "azure-storage-blob" },
     { name = "mcp" },
     { name = "openai-agents" },
     { name = "pip-system-certs" },
@@ -62,6 +63,7 @@ requires-dist = [
     { name = "azure-mgmt-datafactory", specifier = ">=9.2.0" },
     { name = "azure-mgmt-keyvault", specifier = ">=11.0.0" },
     { name = "azure-mgmt-resource", specifier = ">=24.0.0" },
+    { name = "azure-storage-blob", specifier = ">=12.25.1" },
     { name = "mcp", specifier = ">=1.10.1" },
     { name = "openai-agents", specifier = ">=0.1.0" },
     { name = "pip-system-certs", specifier = ">=5.2" },
@@ -193,6 +195,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/50/4c/b27a3dfbedebbcc8e346a956a803528bd94a19fdf14b1de4bd781b03a6cc/azure_mgmt_resource-24.0.0.tar.gz", hash = "sha256:cf6b8995fcdd407ac9ff1dd474087129429a1d90dbb1ac77f97c19b96237b265", size = 3030022, upload-time = "2025-06-17T08:04:01.731Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/18/f047cb553dad6fdb65c625c4fe48552e043c4e9a859416a70c5047d07475/azure_mgmt_resource-24.0.0-py3-none-any.whl", hash = "sha256:27b32cd223e2784269f5a0db3c282042886ee4072d79cedc638438ece7cd0df4", size = 3613790, upload-time = "2025-06-17T08:04:04.046Z" },
+]
+
+[[package]]
+name = "azure-storage-blob"
+version = "12.25.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "cryptography" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/f3/f764536c25cc3829d36857167f03933ce9aee2262293179075439f3cd3ad/azure_storage_blob-12.25.1.tar.gz", hash = "sha256:4f294ddc9bc47909ac66b8934bd26b50d2000278b10ad82cc109764fdc6e0e3b", size = 570541, upload-time = "2025-03-27T17:13:05.424Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/33/085d9352d416e617993821b9d9488222fbb559bc15c3641d6cbd6d16d236/azure_storage_blob-12.25.1-py3-none-any.whl", hash = "sha256:1f337aab12e918ec3f1b638baada97550673911c4ceed892acc8e4e891b74167", size = 406990, upload-time = "2025-03-27T17:13:06.879Z" },
 ]
 
 [[package]]
