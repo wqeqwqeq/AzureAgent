@@ -6,6 +6,15 @@ from agents.mcp import MCPServerStdio
 import time
 import argparse
 
+
+from agents.mcp import ToolFilterContext
+
+def rg_only(ctx: ToolFilterContext, tool) -> bool:
+    """
+    Keep only tools that act on resource groups and
+    hide everything else.
+    """
+    return '-monitor-' in tool.name or '-kusto-' in tool.name or '-group-list' in tool.name
 async def main():
     """Main async function to run the triage agent."""
     
@@ -16,7 +25,7 @@ async def main():
     if args.mcp:
         params = {"command": "npx", "args": ["-y", "@azure/mcp@latest", "server", "start"]}
         now = time.time()
-        async with MCPServerStdio(params=params, client_session_timeout_seconds=240) as mcp_server:
+        async with MCPServerStdio(params=params, client_session_timeout_seconds=240, tool_filter=rg_only) as mcp_server:
             print(f"MCP server started in {time.time() - now} seconds")
 
 
@@ -25,8 +34,7 @@ async def main():
             result = await Runner.run(
                 triage_agent,
                 input=[{"content": "Show me all resource groups in my subscription", "role": "user"}],
-                context=AzureCtx(subscription_id="ee5f77a1-2e59-4335-8bdf-f7ea476f6523",
-                                resource_group_name="SQL-RG",
+                context=AzureCtx(subscription_id="ee5f77a1-2e59-4335-8bdf-f7ea476f6523"
                                 )  # Add initial context instance
             )
             

@@ -53,7 +53,24 @@ system_prompt: |
 
 
 model: gpt-4.1-mini
-mcp_prompt: 
-   You also have access to the Azure MCP server. 
-   You can use it to get information about the Azure resources. 
-   You will only use mcp tool when you need to ask questions about storage account.
+mcp_prompt: |
+   You have access to Azure MCP tools that support a wide range of operations for Azure Monitor and Azure Data Explorer (Kusto).
+
+   For Azure Monitor, you can:
+
+   Query metrics and logs from resources and Log Analytics workspaces
+
+   List available metric definitions and log tables
+
+   Get health insights for monitored entities
+
+   For Kusto (ADX), you can:
+
+   List clusters, databases, and tables
+
+   Retrieve cluster or table schema details
+
+   Run KQL queries and sample data from tables
+
+   Use these tools to inspect, diagnose, and analyze telemetry and data across Azure resources.
+
