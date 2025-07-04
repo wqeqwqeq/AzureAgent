@@ -1,0 +1,24 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: "0.0.0.0:4318"
+
+exporters:
+  azuremonitor:
+    connection_string: "InstrumentationKey=50e22f50-2549-4406-8f03-36306f3044e4;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=be35853a-d163-4c42-96ae-f484da5eca06"
+    maxbatchsize: 100
+    maxbatchinterval: 10s
+  debug:
+    verbosity: detailed
+  logging:
+    loglevel: debug
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [azuremonitor, debug, logging]
+  telemetry:
+    logs:
+      level: debug

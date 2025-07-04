@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logfire
+import os
+
 """DAPEAgent.agent_builder
 
 Common helper functions and shared state used by every agent in the DAPEAgent
@@ -49,10 +52,20 @@ def _build_client(azure_deployment: Optional[str] = None) -> AsyncAzureOpenAI:
         # Register as default so downstream `agents` helpers pick it up
         if settings.openai_api_key is None:
             set_tracing_disabled(True)
+            os.environ["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]= "http://0.0.0.0:4318/v1/traces"
+            # Configure logfire
+            logfire.configure(
+                service_name='AzureAgent',
+                send_to_logfire=False,
+                distributed_tracing=True
+            )
+            logfire.instrument_openai_agents()
+
+
         else:
             set_default_openai_client(_openai_client)
             set_tracing_export_api_key(settings.openai_api_key)
-            set_tracing_disabled(False)
+            set_tracing_disabled(True)
 
     return _openai_client
 
