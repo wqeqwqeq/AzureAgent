@@ -6,6 +6,17 @@ from agents.mcp import MCPServerStdio
 import time
 import argparse
 
+import mlflow
+from mlflow.openai._agent_tracer import add_mlflow_trace_processor  # <- internal API
+
+# 1️⃣ call autolog with log_traces=False so NO SDK patching happens
+mlflow.openai.autolog(log_traces=False)    
+
+# 2️⃣ re-attach ONLY the Agent-SDK processor
+add_mlflow_trace_processor()             
+
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("OpenAI-Agents-only")
 
 from agents.mcp import ToolFilterContext
 
@@ -44,9 +55,9 @@ async def main():
         triage_agent = get_triage_agent()
         result = await Runner.run(
                 triage_agent,
-                input=[{"content": "list keyvault in 'stanleyakvprod' ", "role": "user"}],
+                input=[{"content": "show me all the linked service in adf-stanley", "role": "user"}],
                 context=AzureCtx(subscription_id="ee5f77a1-2e59-4335-8bdf-f7ea476f6523",
-                                resource_group_name="adf",
+                                resource_group_name="SQL-RG",
                                 )  # Add initial context instance
             )
         print("Agent Response:")
