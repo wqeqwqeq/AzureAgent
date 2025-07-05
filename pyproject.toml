@@ -3,7 +3,7 @@ name = "azure-agent"
 version = "0.1.0"
 description = "Azure management agent with AI capabilities"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "azure-identity>=1.23.0",
     "azure-keyvault-secrets>=4.10.0",
@@ -21,10 +21,9 @@ dependencies = [
     "requests>=2.32.4",
     "setuptools>=80.9.0",
     "streamlit>=1.39.0",
-    "azure-ai-ml>=1.27.1",
     "mlflow>=3.1.1",
 ]
 
 [tool.black]
 line-length = 88
-target-version = ['py311']
+target-version = ['py312']
