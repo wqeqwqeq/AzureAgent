@@ -51,12 +51,55 @@ The framework follows a **triage-based architecture** where:
    ```bash
    az login
    ```
+## Docker set up
+This will create a streamlit app with Nginx that serve two page, main page is for the streamlit app, /tracking/ is for the mlflow ui for tracking purpose
+
+
+Create an image
+```
+docker run --rm -it -p 8080:80 dapeagent-app:latest
+```
+
+Run the streamlit on your end 
+
+```
+docker run --rm -it \
+  -v "$(pwd)/mlruns:/app/mlruns" \
+  -p 8080:80 \
+  dapeagent-app:latest
+
+```
+
 
 ### Run Example
 
+#### Command Line Interface
 ```bash
 uv run main-example.py
 ```
+
+#### Streamlit Web Interface
+For a user-friendly web interface:
+
+```bash
+# Option 1: Using Python script
+python run_streamlit.py
+
+# Option 2: Using Streamlit directly
+streamlit run streamlit_ui.py
+
+# Option 3: Using batch script (Windows)
+run_streamlit.bat
+```
+
+The Streamlit UI provides:
+- 🌐 **Web Interface**: Clean, intuitive interface for asking questions
+- 📊 **Token Tracking**: Real-time display of input, output, cache, and total tokens
+- ⚙️ **Azure Context**: Easy input fields for subscription ID, resource group, and resource name
+- 📋 **Example Questions**: Pre-built examples to get started quickly
+- 🔄 **Live Updates**: Real-time token usage updates and response formatting
+
+Access the web interface at `http://localhost:8501` after running the Streamlit app.
 
 ## 💬 Usage Examples
 
@@ -155,7 +198,10 @@ AzureAgent/
 │   ├── config.py               # Azure context configuration
 │   └── triage_agent.py         # Main triage agent
 ├── end-to-end/                 # End-to-end examples
-└── main-example.py             # Main example script
+├── main-example.py             # Main example script
+├── streamlit_ui.py             # Streamlit web interface
+├── run_streamlit.py            # Streamlit launcher script
+└── run_streamlit.bat           # Windows batch script for Streamlit
 ```
 
 ## 🎯 How It Works
@@ -224,3 +270,5 @@ See `main-example.py` for a complete working example, or check the `end-to-end/`
 ---
 
 *Built with OpenAI Agents SDK and Azure SDK for Python • Powered by Azure AI Foundry*
+
+

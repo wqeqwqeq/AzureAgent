@@ -75,6 +75,7 @@ dependencies = [
     { name = "azure-mgmt-datafactory" },
     { name = "azure-mgmt-keyvault" },
     { name = "azure-mgmt-resource" },
+    { name = "azure-mgmt-storage" },
     { name = "azure-storage-blob" },
     { name = "mcp" },
     { name = "mlflow" },
@@ -96,6 +97,7 @@ requires-dist = [
     { name = "azure-mgmt-datafactory", specifier = ">=9.2.0" },
     { name = "azure-mgmt-keyvault", specifier = ">=10.3.1" },
     { name = "azure-mgmt-resource", specifier = ">=24.0.0" },
+    { name = "azure-mgmt-storage", specifier = ">=23.0.1" },
     { name = "azure-storage-blob", specifier = ">=12.25.1" },
     { name = "mcp", specifier = ">=1.10.1" },
     { name = "mlflow", specifier = ">=3.1.1" },
@@ -231,6 +233,21 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/50/4c/b27a3dfbedebbcc8e346a956a803528bd94a19fdf14b1de4bd781b03a6cc/azure_mgmt_resource-24.0.0.tar.gz", hash = "sha256:cf6b8995fcdd407ac9ff1dd474087129429a1d90dbb1ac77f97c19b96237b265", size = 3030022, upload-time = "2025-06-17T08:04:01.731Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/14/18/f047cb553dad6fdb65c625c4fe48552e043c4e9a859416a70c5047d07475/azure_mgmt_resource-24.0.0-py3-none-any.whl", hash = "sha256:27b32cd223e2784269f5a0db3c282042886ee4072d79cedc638438ece7cd0df4", size = 3613790, upload-time = "2025-06-17T08:04:04.046Z" },
+]
+
+[[package]]
+name = "azure-mgmt-storage"
+version = "23.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-common" },
+    { name = "azure-mgmt-core" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/02/79/367314b80c39507ef59d5daf987444164a6c9ef84cb65e5e999949cfec30/azure_mgmt_storage-23.0.1.tar.gz", hash = "sha256:c3ab2ac9352d1c01d85b56d6716dcce1e4680f920b148a24b4369bb91b9223b4", size = 208118, upload-time = "2025-06-30T07:27:44.603Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/28/c0/e80fb941c0ef089436866c092fb09f95d882b8492678dbe360650df881e1/azure_mgmt_storage-23.0.1-py3-none-any.whl", hash = "sha256:c74d4ecb5100685b639506d61d7913ab8e940ae898fb0997ad13b34ed2212b43", size = 286319, upload-time = "2025-06-30T07:27:45.892Z" },
 ]
 
 [[package]]

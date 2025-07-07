@@ -3,6 +3,7 @@ import streamlit as st
 from agents import Runner, trace
 from DAPEAgent.triage_agent import get_triage_agent
 from DAPEAgent.config import AzureCtx
+from azure_tools.auth import AzureAuthentication
 import mlflow
 from mlflow.openai._agent_tracer import add_mlflow_trace_processor
 
@@ -18,6 +19,64 @@ st.set_page_config(
     page_icon="☁️",
     layout="wide"
 )
+
+def streamlit_device_code_callback(verification_uri, user_code, expires_in):
+    """
+    Streamlit version of device code authentication callback.
+    Displays authentication instructions in the UI that can be cleared after completion.
+    """
+    # Create empty placeholders that can be cleared later
+    if 'auth_placeholder' not in st.session_state:
+        st.session_state.auth_placeholder = st.empty()
+    
+    # Mark authentication as in progress
+    st.session_state.auth_in_progress = True
+    
+    with st.session_state.auth_placeholder.container():
+        st.info("🔐 Azure Device Code Authentication Required")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 📱 Authentication Steps:")
+            st.markdown(f"1. Open this URL in your browser:")
+            st.code(verification_uri)
+            st.markdown(f"2. Enter this code:")
+            st.code(user_code, language="text")
+            st.markdown(f"3. Complete authentication in your browser")
+        
+        with col2:
+            st.markdown("### ⏰ Important Notes:")
+            st.warning(f"Code expires in {expires_in} seconds")
+            st.info("💡 You can use any device with a web browser")
+            st.info("💡 After entering the code, return to this app")
+
+def clear_auth_ui():
+    """Clear the authentication UI after successful authentication."""
+    if 'auth_placeholder' in st.session_state:
+        st.session_state.auth_placeholder.empty()
+    st.session_state.auth_in_progress = False
+    st.session_state.auth_completed = True
+
+# Initialize Azure Authentication at the beginning of the app
+if 'auth' not in st.session_state:
+    st.session_state.auth = AzureAuthentication(device_code_callback=streamlit_device_code_callback)
+
+auth = st.session_state.auth
+
+# Check if authentication was completed and clear UI if needed
+if hasattr(st.session_state, 'auth_in_progress') and st.session_state.auth_in_progress:
+    # Check if authentication is now complete
+    try:
+        # Try to get a token to see if authentication is complete
+        token = auth.get_token()
+        if token:
+            clear_auth_ui()
+            st.success("✅ Authentication completed successfully!")
+            st.rerun()  # Refresh the page to show the cleared UI
+    except Exception:
+        # Authentication still in progress or failed
+        pass
 
 st.title("☁️ Azure Agent Assistant")
 st.markdown("Ask questions about your Azure resources and get intelligent responses!")
@@ -95,8 +154,8 @@ if st.button("🚀 Submit Question", type="primary", use_container_width=True):
         st.error("Please enter a question!")
     else:
         with st.spinner("Processing your question..."):
-            # Create Azure context
-            azure_ctx = AzureCtx()
+            # Create Azure context with authentication
+            azure_ctx = AzureCtx(auth=auth)
             
             # Set context values if provided
             if subscription_id.strip():

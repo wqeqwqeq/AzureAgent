@@ -1,0 +1,23 @@
+# ── cache / build artefacts ─────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.mypy_cache/
+.idea/
+.vscode/
+*.log
+.venv/
+venv_linux/
+mlartifacts/
+mlruns/
+
+# ── tests & local miscellany ───────────────────────────
+tests/               # entire test tree
+main-example.py      # sample script
+*.ipynb              # notebooks
+*.md                 # docs / read-me
+.env.example
+# __other________________________________________________
+
+.git
+.gitignore

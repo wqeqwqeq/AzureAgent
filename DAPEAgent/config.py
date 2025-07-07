@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field, SecretStr, AnyHttpUrl, PostgresDsn
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
 from azure_tools.auth import AzureAuthentication
@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     az_openai_endpoint: str = Field(..., alias="AZURE_OPENAI_ENDPOINT")
     az_openai_deployment: str = Field("gpt-4.1", alias="AZURE_OPENAI_DEPLOYMENT")
     az_openai_api_version: str = Field("2024-05-01-preview", alias="AZURE_OPENAI_API_VERSION")
+    azure_auth_method: str = Field("default", alias="AZURE_AUTH_METHOD")
+    azure_tenant_id: str = Field(..., alias="AZURE_TENANT_ID")
+    azure_client_id: Optional[str] = Field(default=None, alias="AZURE_CLIENT_ID")
     openai_api_key: Optional[str] = Field(default=None, alias="OPENAI_API_KEY")
 
     class Config:
