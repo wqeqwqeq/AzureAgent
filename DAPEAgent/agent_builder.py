@@ -48,7 +48,7 @@ def _build_client(azure_deployment: Optional[str] = None) -> AsyncAzureOpenAI:
         )
         # Register as default so downstream `agents` helpers pick it up
         if settings.openai_api_key is None:
-            set_tracing_disabled(True)
+            set_tracing_disabled(False)
         else:
             set_default_openai_client(_openai_client)
             set_tracing_export_api_key(settings.openai_api_key)

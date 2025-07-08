@@ -69,8 +69,7 @@ if hasattr(st.session_state, 'auth_in_progress') and st.session_state.auth_in_pr
     # Check if authentication is now complete
     try:
         # Try to get a token to see if authentication is complete
-        token = auth.get_token()
-        if token:
+        if auth.is_authenticated:
             clear_auth_ui()
             st.success("✅ Authentication completed successfully!")
             st.rerun()  # Refresh the page to show the cleared UI
