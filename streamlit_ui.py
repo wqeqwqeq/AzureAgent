@@ -10,7 +10,7 @@ from mlflow.openai._agent_tracer import add_mlflow_trace_processor
 # Configure MLflow
 mlflow.openai.autolog(log_traces=False)    
 add_mlflow_trace_processor()             
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
 mlflow.set_experiment("OpenAI-Agents-only")
 
 # Streamlit page configuration

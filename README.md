@@ -57,7 +57,7 @@ This will create a streamlit app with Nginx that serve two page, main page is fo
 
 Create an image
 ```
-docker run --rm -it -p 8080:80 dapeagent-app:latest
+docker build -t dapeagent-app:latest .
 ```
 
 Run the streamlit on your end 

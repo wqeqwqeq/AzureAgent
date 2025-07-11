@@ -5,7 +5,7 @@
 FROM python:3.12-slim AS builder
 
 # 1️⃣ system deps that uv might need when compiling wheels
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends --fix-missing \
       build-essential curl git && \
     rm -rf /var/lib/apt/lists/*
 
