@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 from .base import AzureResourceBase
 from .auth import AzureAuthentication
 
@@ -8,8 +8,8 @@ class AzureKeyVault(AzureResourceBase):
         self,
         resource_group_name: str,
         resource_name: str,
-        subscription_id: str = None,
-        auth: AzureAuthentication = None,
+        subscription_id: Optional[str] = None,
+        auth: Optional[AzureAuthentication] = None,
     ):
         """
         Initialize Azure Key Vault resource.
@@ -28,7 +28,7 @@ class AzureKeyVault(AzureResourceBase):
             auth=auth,
         )
 
-    def get_secret(self, secret_name: str) -> str:
+    def get_secret(self, secret_name: str) -> Optional[str]:
         """
         Get a secret from the key vault.
 

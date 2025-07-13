@@ -11,6 +11,7 @@ from agents import (
     handoff,  # tools & handoffs
     OpenAIChatCompletionsModel,
 )
+from agents.mcp import MCPServerStdio
 
 from azure_tools.auth import AzureAuthentication
 from .agent_builder import _build_client, load_yaml_prompt
@@ -19,6 +20,7 @@ from .adf.linked_services_agent import get_agent_adf_linked_services
 from .adf.integration_runtime_agent import get_agent_adf_integration_runtime
 # from .adf.pipelines_agent import get_agent_adf_pipelines # this is not working as of now due to pydantic issue
 from .keyvault.key_vault_agent import get_agent_key_vault
+from .mcp.azure_mcp_agent import get_azure_mcp_agent
 
 
 # ---------- Triage agent tools ----------
@@ -98,31 +100,20 @@ def set_azure_context(
     return "\n".join(status_parts)
 
 
-# ---------- Triage agent ----------
-def load_triage_system_prompt() -> str:
-    """Load the system prompt from the YAML file."""
-    yaml_path = Path(__file__).parent / "prompts" / "triage_agent.yaml"
-    prompt_data = load_yaml_prompt(yaml_path)
-    return prompt_data.get("system_prompt", "You are an Azure resource triage assistant.")
 
 
-def get_triage_agent(use_mcp_server: bool = False, **kwargs) -> Agent[AzureCtx]:
+def get_triage_agent( **kwargs) -> tuple[Agent[AzureCtx], MCPServerStdio]:
 
     yaml_path = Path(__file__).parent / "prompts" / "triage_agent.yaml"
     prompt_data = load_yaml_prompt(yaml_path)
-
-    if use_mcp_server:
-        mcp_prompt = prompt_data.get("mcp_prompt", None)
-        system_prompt = prompt_data.get("system_prompt", "You are an Azure resource triage assistant.") + mcp_prompt
-    else:
-        system_prompt = prompt_data.get("system_prompt", "You are an Azure resource triage assistant.")
+    system_prompt = prompt_data.get("system_prompt", "You are an Azure resource triage assistant.")
 
     model = prompt_data.get("model", "gpt-4.1-mini")
 
     adf_linked_service_agent, _ = get_agent_adf_linked_services()
     adf_integration_runtime_agent, _ = get_agent_adf_integration_runtime()
-    # adf_pipelines_agent, _ = get_agent_adf_pipelines()  
     keyvault_agent, _ = get_agent_key_vault()
+    mcp_agent, azure_mcp_server , _ = get_azure_mcp_agent()
     triage_agent = Agent[AzureCtx](
         name="Azure Triage Agent",
         model=OpenAIChatCompletionsModel(model, openai_client=_build_client()),
@@ -133,10 +124,12 @@ def get_triage_agent(use_mcp_server: bool = False, **kwargs) -> Agent[AzureCtx]:
         handoffs=[
             handoff(adf_linked_service_agent),
             handoff(adf_integration_runtime_agent),
-            # handoff(adf_pipelines_agent),
             handoff(keyvault_agent),
+            handoff(mcp_agent),
         ],
         **kwargs
     )
-    return triage_agent
+    return triage_agent, azure_mcp_server
+
+
 

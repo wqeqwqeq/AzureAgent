@@ -62,8 +62,8 @@ def _build_client(azure_deployment: Optional[str] = None) -> AsyncAzureOpenAI:
 # Misc helpers
 # ---------------------------------------------------------------------------
 
-def load_yaml_prompt(path: str | Path) -> str:
-    """Read a YAML prompt file and return the system_prompt content as a string."""
+def load_yaml_prompt(path: str | Path) -> dict:
+    """Read a YAML prompt file and return the parsed YAML data as a dictionary."""
     import yaml
     
     prompt_content = Path(path).expanduser().read_text(encoding="utf-8")

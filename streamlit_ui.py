@@ -107,15 +107,15 @@ user_question = st.text_area(
 
 async def run_agent(question: str, azure_ctx: AzureCtx):
     """Run the triage agent with the given question and context."""
-    triage_agent = get_triage_agent()
-    
+    triage_agent, azure_mcp_server = get_triage_agent()
+    await azure_mcp_server.connect()
     # Run the agent - MLflow logging is handled automatically
     result = await Runner.run(
         triage_agent,
         input=[{"content": question, "role": "user"}],
         context=azure_ctx
     )
-    
+    await azure_mcp_server.cleanup()
     # Get actual token usage from OpenAI raw responses
     try:
         total_tokens = 0

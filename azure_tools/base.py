@@ -3,7 +3,7 @@ from azure.mgmt.batch import BatchManagementClient
 from azure.keyvault.secrets import SecretClient
 from azure.mgmt.resource.locks import ManagementLockClient
 from azure.storage.blob import BlobServiceClient
-from typing import Literal
+from typing import Literal, Optional
 from .auth import AzureAuthentication
 from .subscription_resource import SubscriptionResourceManager
 from subprocess import PIPE, run
@@ -15,8 +15,8 @@ class AzureResourceBase:
         resource_group_name: str,
         resource_name: str,
         resource_type: Literal["adf", "batch", "keyvault", "locks", "storage"],
-        subscription_id: str = None,
-        auth: AzureAuthentication = None,
+        subscription_id: Optional[str] = None,
+        auth: Optional[AzureAuthentication] = None,
     ):
         """
         Base class for Azure resource operations.

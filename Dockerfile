@@ -33,13 +33,16 @@ RUN uv sync --frozen
 # --------------------------------------------------------
 FROM python:3.12-slim
 
-# Install nginx and Azure CLI
+# Install nginx, Node.js, npm, and Azure CLI
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     curl \
     ca-certificates \
     gnupg \
     lsb-release && \
+    # Install Node.js and npm
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+    apt-get install -y nodejs && \
     # Install Azure CLI
     curl -sLS https://packages.microsoft.com/keys/microsoft.asc | \
     gpg --dearmor | \
