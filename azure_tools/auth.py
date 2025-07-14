@@ -2,7 +2,7 @@ from typing import Callable, Optional
 from azure.identity import DefaultAzureCredential, InteractiveBrowserCredential, DeviceCodeCredential,TokenCachePersistenceOptions
 from azure.mgmt.resource import SubscriptionClient
 from datetime import datetime, timedelta
-
+import subprocess, re
 from .config import settings 
 
 
@@ -112,3 +112,45 @@ class AzureAuthentication:
                 token_response.expires_on
             ) - timedelta(minutes=5)
         return self.token
+
+
+
+
+DEVICE_CODE_RE = re.compile(r"https://\S+"), re.compile(r"code\s+([A-Z0-9-]{8,})")
+
+def start_az_login():
+    """
+    Launch 'az login --use-device-code' *once* and return
+    (verification_uri, user_code, proc_handle).
+    """
+    check_auth = subprocess.Popen(
+        ["az", "account", "show"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    check_auth.wait()
+    if check_auth.poll() == 0:
+        print("Azure account is already authenticated")
+        return True, None, None, None
+
+    proc = subprocess.Popen(
+        ["az", "login", "--use-device-code", "--output", "none"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    # Read lines until we see the URI & code
+    verification_uri, user_code = None, None
+    for line in iter(proc.stdout.readline, ""):
+        if "https://" in line and "code" in line:
+            uri_m = re.search(r"https://\S+", line)
+            code_m = re.search(r"code\s+([A-Z0-9-]{8,})", line)
+            verification_uri = uri_m.group(0) if uri_m else "Link not found"
+            user_code = code_m.group(1) if code_m else "Code not found"
+            break          # we’ve got what we need – stop reading
+    return False, verification_uri, user_code, proc
+

@@ -19,7 +19,7 @@ from agents import (
 from azure_tools.keyvault import AzureKeyVault
 from ..agent_builder import _build_client, load_yaml_prompt
 from ..config import AzureCtx
-
+from ..shared_tools import set_azure_context
 
 # ---------- Tool Functions ----------
 @function_tool
@@ -157,6 +157,7 @@ def get_agent_key_vault(
             list_secrets,
             get_secret,
             set_secret,
+            set_azure_context
         ],
         handoff_description=handoff_description,
     )

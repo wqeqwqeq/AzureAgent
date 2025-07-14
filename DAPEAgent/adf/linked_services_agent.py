@@ -14,7 +14,7 @@ from agents import (
 from azure_tools.adf.linked_services import ADFLinkedServices
 from ..agent_builder import _build_client, load_yaml_prompt
 from ..config import AzureCtx
-
+from ..shared_tools import set_azure_context
 
 # ---------- Tool Functions ----------
 @function_tool
@@ -203,6 +203,7 @@ def get_agent_adf_linked_services(
             get_linked_service_details,
             update_linked_service_sf_account,
             test_linked_service_connection,
+            set_azure_context
         ],
         handoff_description=handoff_description,
     )

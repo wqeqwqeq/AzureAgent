@@ -16,6 +16,7 @@ from agents.mcp import MCPServerStdio, ToolFilterContext
 
 from ..agent_builder import _build_client, load_yaml_prompt
 from ..config import AzureCtx
+from ..shared_tools import set_azure_context
 
 
 def allow_tools(ctx: ToolFilterContext, tool) -> bool:
@@ -60,7 +61,7 @@ def allow_tools(ctx: ToolFilterContext, tool) -> bool:
         "azmcp-role-assignment-list",
         "azmcp-subscription-list"
     ]
-    if tool.name in tool_list:
+    if tool.name in tool_list or "-storage-" in tool.name:
         return True
     return False
 
@@ -111,7 +112,8 @@ def get_azure_mcp_agent(
     mcp_server = MCPServerStdio(
         params={"command": "npx", "args": ["-y", "@azure/mcp@latest", "server", "start"]}, 
         client_session_timeout_seconds=240, 
-        tool_filter=allow_tools
+        tool_filter=allow_tools,
+        cache_tools_list=True
     )
 
     agent = Agent[AzureCtx](
@@ -120,6 +122,7 @@ def get_azure_mcp_agent(
         instructions=system_prompt,
         mcp_servers=[mcp_server],
         handoff_description=handoff_description,
+        tools=[set_azure_context]
     )
     
     return agent, mcp_server, context, 

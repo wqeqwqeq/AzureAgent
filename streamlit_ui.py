@@ -1,13 +1,18 @@
-import asyncio,re 
+import asyncio,re, time
 import subprocess
+from typing import Optional
 import streamlit as st
 from agents import Runner, trace
-from DAPEAgent.triage_agent import get_triage_agent
+from DAPEAgent.triage_agent import run_triage_agent
 from DAPEAgent.config import AzureCtx
-from azure_tools.auth import AzureAuthentication
+from azure_tools.auth import AzureAuthentication, start_az_login
 import mlflow
+from mlflow.openai._agent_tracer import add_mlflow_trace_processor
 
 # Configure MLflow
+# mlflow.openai.autolog() #type: ignore
+mlflow.openai.autolog(log_traces=False) #type: ignore
+add_mlflow_trace_processor()             
 mlflow.set_tracking_uri("http://127.0.0.1:5000")
 mlflow.set_experiment("OpenAI-Agents-only")
 
@@ -18,135 +23,79 @@ st.set_page_config(
     layout="wide"
 )
 
-async def az_login():
-    """
-    Start az login with device code and return verification details.
-    Does not wait for completion - just gets the code and returns.
-    """
-    # Create subprocess with asyncio
-    proc = await asyncio.create_subprocess_exec(
-        "az", "login", "--use-device-code", "--output", "none",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT
-    )
-    
-    # Check if stdout is available
-    if proc.stdout is None:
-        print("Error: Unable to read subprocess output")
-        return None, None
-    
-    # Read output line by line asynchronously
-    async for line in proc.stdout:
-        line = line.decode('utf-8').strip()
-        if not line:
-            continue
-            
-        if "https://" in line and "code" in line:
-            url_match = re.search(r"https://\S+", line)
-            code_match = re.search(r"code ([A-Z0-9-]{8,})", line)
-            
-            if url_match and code_match:
-                verification_uri = url_match.group(0)
-                user_code = code_match.group(1)
-                return verification_uri, user_code
-    
-    # Don't wait for completion - let it run in background
-    return None, None
-
-def az_account_show():
-    """
-    Check if Azure CLI authentication is successful by running 'az account show'.
-    Returns True if authenticated, False otherwise.
-    """
-    try:
-        proc = subprocess.run(
-            ["az", "account", "show", "--output", "json"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        if proc.returncode == 0:
-            # Successfully got account info, user is authenticated
-            account_info = proc.stdout.strip()
-            if account_info:
-                print("Azure CLI authentication verified successfully")
-                return True
-        else:
-            print(f"Azure CLI authentication failed: {proc.stderr}")
-            return False
-            
-    except Exception as e:
-        print(f"Error checking Azure CLI authentication: {str(e)}")
-        return False
-    
-    return False
-
-# Initialize session state
-if 'cli_auth' not in st.session_state:
-    st.session_state.cli_auth = False
-if 'verification_uri' not in st.session_state:
+# 1️⃣  Initialise session state keys once
+if "login_proc" not in st.session_state:
+    st.session_state.login_proc = None          # handle returned by Popen
+if "verification_uri" not in st.session_state:
     st.session_state.verification_uri = None
-if 'user_code' not in st.session_state:
+if "user_code" not in st.session_state:
     st.session_state.user_code = None
+if "cli_auth" not in st.session_state:
+    st.session_state.cli_auth = False
 
-st.title("☁️ Azure Agent Assistant")
 
-# Authentication flow
-if not st.session_state.cli_auth:
-    if st.session_state.verification_uri is None:
-        # Start authentication automatically
-        try:
-            # Get verification details
-            verification_uri, user_code = asyncio.run(az_login())
-            
-            if verification_uri and user_code:
-                # Store in session state
-                st.session_state.verification_uri = verification_uri
-                st.session_state.user_code = user_code
-                st.rerun()
-            else:
-                st.error("❌ Failed to start authentication process")
-        except Exception as e:
-            st.error(f"❌ Authentication error: {str(e)}")
+# 2️⃣  Kick off login the *first* time around
+if st.session_state.login_proc is None:
+    print("Starting Azure CLI authentication...")
+    has_authed, uri, code, proc = start_az_login() #type: ignore
+    if has_authed:
+        st.success("✅ Logged in successfully!")
+        st.session_state.cli_auth = True
+        st.session_state.login_proc = True
+        st.rerun()
+    elif uri and code:
+        st.session_state.update(
+            {"verification_uri": uri, "user_code": code, "login_proc": proc}
+        )
+        st.rerun()                 # show the code immediately
     else:
-        # Show verification UI
-        st.markdown("## 🔐 Azure CLI Authentication")
-        st.markdown("### 📱 Complete authentication in your browser:")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("**1. Open this URL:**")
-            st.code(st.session_state.verification_uri)
-        with col2:
-            st.markdown("**2. Enter this code:**")
-            st.code(st.session_state.user_code)
-        
-        st.warning("⏰ Code expires in 900 seconds (15 minutes)")
-        st.info("💡 After completing authentication in your browser, click 'Check Authentication' below")
-        
-        # Check authentication button
-        if st.button("🔍 Check Authentication", type="primary"):
-            with st.spinner("Checking authentication status..."):
-                is_authenticated = az_account_show()
-                if is_authenticated:
-                    # Set cli_auth = True and clear verification data
-                    st.session_state.cli_auth = True
-                    st.session_state.verification_uri = None
-                    st.session_state.user_code = None
-                    st.success("✅ Authentication successful!")
-                    st.rerun()  # Clean UI and show chat page
-                else:
-                    st.error("❌ Authentication not complete. Please complete the authentication process and try again.")
-                    
-        # Reset button to start over
-        if st.button("🔄 Start Over", type="secondary"):
-            st.session_state.verification_uri = None
-            st.session_state.user_code = None
+        st.error("Failed to start 'az login'")
+
+
+# 3️⃣  UI: show URL + code until login is done
+if not st.session_state.cli_auth:
+    st.title("☁️ Azure Agent Assistant")
+    st.info("🔐 Azure Device Code Authentication Required")
+    st.markdown("Open the URL below, enter the code, and sign in.")
+
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 📱 Authentication Steps:")
+        st.markdown(f"1. Open this URL in your browser:")
+        st.code(st.session_state.verification_uri)
+        st.markdown(f"2. Enter this code:")
+        st.code(st.session_state.user_code, language="text")
+    
+    with col2:
+        st.markdown("### ⏰ Important Notes:")
+        st.markdown("")
+        st.info("💡 Authorize with your '-cl' cloud account")
+        st.info("💡 You can use any device with a web browser")
+        st.info("💡 After entering the code, return to this app")
+
+    # Poll the process every rerun
+    proc: subprocess.Popen = st.session_state.login_proc #type: ignore
+    if proc.poll() is None:
+        st.info("Waiting for sign-in to complete...")
+        time.sleep(2)
+        st.rerun()
+    else:
+        if proc.returncode == 0:
+            st.success("✅ Logged in successfully!")
+            st.session_state.cli_auth = True
             st.rerun()
+        else:
+            st.error("❌ Login failed – start over.")
+            if st.button("🔄 Try again"):
+                for k in ["login_proc", "verification_uri", "user_code"]:
+                    st.session_state[k] = None
+                st.rerun()
+
 
 else:
     # Main chat interface
+    st.title("☁️ Azure Agent Assistant")
     st.markdown("Ask questions about your Azure resources and get intelligent responses!")
     
     # Sidebar for Azure Context
@@ -174,47 +123,6 @@ else:
         height=100
     )
 
-    async def run_agent(question: str, azure_ctx: AzureCtx):
-        """Run the triage agent with the given question and context."""
-        triage_agent, azure_mcp_server = get_triage_agent()
-        await azure_mcp_server.connect()
-        
-        # Run the agent
-        result = await Runner.run(
-            triage_agent,
-            input=[{"content": question, "role": "user"}],
-            context=azure_ctx
-        )
-        await azure_mcp_server.cleanup()
-        
-        # Get token usage from OpenAI raw responses
-        try:
-            total_tokens = 0
-            input_tokens = 0
-            output_tokens = 0
-            cache_tokens = 0
-            
-            for response in result.raw_responses:
-                total_tokens += response.usage.total_tokens
-                input_tokens += response.usage.input_tokens
-                output_tokens += response.usage.output_tokens
-                cache_tokens += response.usage.input_tokens_details.cached_tokens
-            
-            token_usage = {
-                'input_tokens': input_tokens,
-                'output_tokens': output_tokens,
-                'cache_tokens': cache_tokens,
-                'total_tokens': total_tokens
-            }
-        except Exception as e:
-            token_usage = {
-                'input_tokens': 0,
-                'output_tokens': 0,
-                'cache_tokens': 0,
-                'total_tokens': 0
-            }
-        
-        return result.final_output, token_usage
 
     # Submit button and processing
     if st.button("🚀 Submit Question", type="primary", use_container_width=True):
@@ -236,7 +144,7 @@ else:
                 
                 try:
                     # Run the agent
-                    result, token_usage = asyncio.run(run_agent(user_question, azure_ctx))
+                    result, token_usage = asyncio.run(run_triage_agent(user_question, azure_ctx))
                     
                     # Display the response
                     st.markdown("## 🤖 Agent Response")
