@@ -11,7 +11,6 @@ from agents import (
     OpenAIChatCompletionsModel,
 )
 
-from DAPEAgent.shared_tools import set_azure_context
 from azure_tools.adf.integration_runtime import ADFIntegrationRuntime
 from ..agent_builder import _build_client, load_yaml_prompt
 from ..config import AzureCtx

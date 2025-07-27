@@ -3,8 +3,8 @@ import subprocess
 from typing import Optional
 import streamlit as st
 from agents import Runner, trace
-from DAPEAgent.triage_agent import run_triage_agent
-from DAPEAgent.config import AzureCtx
+from DAPEAgent.azure.triage_agent import run_triage_agent
+from DAPEAgent.azure.config import AzureCtx
 from azure_tools.auth import AzureAuthentication, start_az_login
 import mlflow
 from mlflow.openai._agent_tracer import add_mlflow_trace_processor

@@ -13,3 +13,4 @@ test.ipynb
 venv_linux
 mlartifacts/
 mlruns/
+.DS_Store

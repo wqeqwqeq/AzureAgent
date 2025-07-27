@@ -11,7 +11,7 @@ from agents import Agent, Runner, function_tool, trace, set_default_openai_clien
 # Import the ADF Linked Services class
 from azure_tools.adf.linked_services import ADFLinkedServices
 
-from DAPEAgent.config import settings
+from DAPEAgent.azure.config import settings
 
 client = AsyncAzureOpenAI(
     api_key=settings.az_openai_api_key.get_secret_value(),
