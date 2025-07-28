@@ -18,7 +18,17 @@ def initialize_agent(service_type):
         elif service_type == "Azure":
             if "azure_ctx" not in st.session_state:
                 auth = AzureAuthentication()
-                st.session_state.azure_ctx = AzureCtx(auth=auth)
+                azure_ctx = AzureCtx(auth=auth)
+                
+                # Apply custom subscription settings if available
+                if hasattr(st.session_state, 'azure_subscription_id'):
+                    azure_ctx.subscription_id = st.session_state.azure_subscription_id
+                if hasattr(st.session_state, 'azure_resource_group'):
+                    azure_ctx.resource_group_name = st.session_state.azure_resource_group
+                if hasattr(st.session_state, 'azure_resource_name'):
+                    azure_ctx.resource_name = st.session_state.azure_resource_name
+                    
+                st.session_state.azure_ctx = azure_ctx
             st.session_state.selected_service = "Azure"
             st.session_state.agent_initialized = True
             return True
@@ -56,7 +66,28 @@ def get_github_response(prompt):
 def get_azure_response(prompt):
     """Get response from Azure agent."""
     azure_ctx = st.session_state.get("azure_ctx")
-    result, _ = asyncio.run(run_triage_agent(prompt, azure_ctx))
+    
+    # Update context with current session state values if they exist
+    if azure_ctx:
+        if hasattr(st.session_state, 'azure_subscription_id'):
+            azure_ctx.subscription_id = st.session_state.azure_subscription_id
+        if hasattr(st.session_state, 'azure_resource_group'):
+            azure_ctx.resource_group_name = st.session_state.azure_resource_group
+        if hasattr(st.session_state, 'azure_resource_name'):
+            azure_ctx.resource_name = st.session_state.azure_resource_name
+    
+    # Build context with chat history similar to GitHub agent
+    chat_history = st.session_state.get("chat_history", [])
+    if chat_history:
+        context = "Previous conversation:\n"
+        for msg in chat_history[-10:]:  # Keep last 10 exchanges
+            context += f"User: {msg['user']}\nAssistant: {msg['assistant']}\n\n"
+        context += f"Current question: {prompt}"
+        full_input = context
+    else:
+        full_input = prompt
+    
+    result, _ = asyncio.run(run_triage_agent(full_input, azure_ctx))
     return result
 
 def main():
@@ -191,47 +222,61 @@ def main():
                 # Azure-specific configuration
                 # st.markdown("#### Azure Settings")
                 
-                # Check Azure environment variables
-                # azure_vars = [
-                #     "AZURE_OPENAI_DEPLOYMENT_NAME",
-                #     "AZURE_OPENAI_ENDPOINT", 
-                #     "AZURE_OPENAI_API_KEY"
-                # ]
+                # Custom subscription toggle
+                use_custom_subscription = st.checkbox("Use custom subscription settings")
                 
-                # missing_azure_vars = []
-                # for var in azure_vars:
-                #     if not os.getenv(var):
-                #         missing_azure_vars.append(var)
-                
-                # if missing_azure_vars:
-                #     st.error(f"Missing Azure environment variables: {', '.join(missing_azure_vars)}")
-                #     st.info("Please set these variables in your .env file")
-                # else:
-                #     st.success("✅ All Azure environment variables are set")
-                
-                # Subscription selection (placeholder - you can populate this with actual subscriptions)
-                subscription_options = ["EDW", "EDL", "MDM Vehicle", "MDM Customer"]
-                selected_subscription = st.selectbox(
-                    "Select Azure Subscription:",
-                    options=subscription_options,
-                    index=None,
-                    placeholder="Choose subscription..."
-                )
-                
-                if selected_subscription:
-                    st.info(f"Selected: {selected_subscription}")
-                
-                # Environment selection for Azure
-                azure_environments = ["NonProd", "Prod"]
-                selected_azure_environment = st.selectbox(
-                    "Select Azure Environment:",
-                    options=azure_environments,
-                    index=None,
-                    placeholder="Choose environment..."
-                )
-                
-                if selected_azure_environment:
-                    st.info(f"Selected: {selected_azure_environment}")
+                if use_custom_subscription:
+                    # Custom Azure Context inputs (moved from streamlit_ui.py)
+                    st.markdown("#### Custom Azure Context")
+                    subscription_id = st.text_input(
+                        "Subscription ID",
+                        placeholder="e.g., ee5f77a1-2e59-4335-8bdf-f7ea476f6523",
+                        help="Enter your Azure subscription ID"
+                    )
+                    resource_group_name = st.text_input(
+                        "Resource Group Name",
+                        placeholder="e.g., SQL-RG",
+                        help="Enter your Azure resource group name"
+                    )
+                    resource_name = st.text_input(
+                        "Resource Name",
+                        placeholder="e.g., adf-stanley",
+                        help="Enter your Azure resource name"
+                    )
+                    
+                    # Store custom values in session state
+                    if subscription_id:
+                        st.session_state.azure_subscription_id = subscription_id.strip()
+                    if resource_group_name:
+                        st.session_state.azure_resource_group = resource_group_name.strip()
+                    if resource_name:
+                        st.session_state.azure_resource_name = resource_name.strip()
+                else:
+                    # Predefined subscription selection
+                    subscription_options = ["EDW", "EDL", "MDM Vehicle", "MDM Customer"]
+                    selected_subscription = st.selectbox(
+                        "Select Azure Subscription:",
+                        options=subscription_options,
+                        index=None,
+                        placeholder="Choose subscription..."
+                    )
+                    
+                    if selected_subscription:
+                        st.info(f"Selected: {selected_subscription}")
+                        st.session_state.azure_selected_subscription = selected_subscription
+                    
+                    # Environment selection for Azure
+                    azure_environments = ["NonProd", "Prod"]
+                    selected_azure_environment = st.selectbox(
+                        "Select Azure Environment:",
+                        options=azure_environments,
+                        index=None,
+                        placeholder="Choose environment..."
+                    )
+                    
+                    if selected_azure_environment:
+                        st.info(f"Selected: {selected_azure_environment}")
+                        st.session_state.azure_selected_environment = selected_azure_environment
                 
             elif selected_service == "Snowflake":
                 # Snowflake-specific configuration
@@ -302,6 +347,7 @@ def main():
         # Clear chat button
         if st.button("🗑️ Clear Chat"):
             st.session_state.messages = []
+            st.session_state.chat_history = []
             st.rerun()
         
         # Information section
@@ -352,8 +398,8 @@ def main():
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
                         
-                        # Update chat history for GitHub agent
-                        if st.session_state.get("selected_service") == "GitHub":
+                        # Update chat history for both GitHub and Azure agents
+                        if st.session_state.get("selected_service") in ["GitHub", "Azure"]:
                             st.session_state.chat_history.append({
                                 "user": prompt,
                                 "assistant": response

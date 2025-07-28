@@ -31,35 +31,9 @@ def allow_tools(ctx: ToolFilterContext, tool) -> bool:
         bool: True if tool is allowed, False otherwise
     """
     tool_list = [
-        "microsoft_docs_search",
-        "azmcp-azureterraformbestpractices-get",
-        "azmcp-bestpractices-get",
-        "azmcp-bicepschema-get",
-        "azmcp-cosmos-account-list",
-        "azmcp-cosmos-database-container-item-query",
-        "azmcp-cosmos-database-container-list",
-        "azmcp-cosmos-database-list",
-        "azmcp-foundry-models-deploy",
-        "azmcp-foundry-models-deployments-list",
-        "azmcp-foundry-models-list",
-        "azmcp-group-list",
-        "azmcp-kusto-cluster-get",
-        "azmcp-kusto-cluster-list",
-        "azmcp-kusto-database-list",
-        "azmcp-kusto-query",
-        "azmcp-kusto-sample",
-        "azmcp-kusto-table-list",
-        "azmcp-kusto-table-schema",
-        "azmcp-monitor-healthmodels-entity-gethealth",
-        "azmcp-monitor-metrics-definitions",
-        "azmcp-monitor-metrics-query",
-        "azmcp-monitor-resource-log-query",
-        "azmcp-monitor-table-list",
-        "azmcp-monitor-table-type-list",
-        "azmcp-monitor-workspace-list",
-        "azmcp-monitor-workspace-log-query",
-        "azmcp-role-assignment-list",
-        "azmcp-subscription-list"
+        "storage",
+        "kusto"
+
     ]
     if tool.name in tool_list or "-storage-" in tool.name:
         return True
