@@ -1,6 +1,63 @@
 import os
+import asyncio
 import streamlit as st
-from agent_service import initialize_agent, get_agent_response, is_agent_initialized
+from DAPEAgent.github.github_mcp_agent import GitHubAgent
+from DAPEAgent.azure.triage_agent import run_triage_agent
+from DAPEAgent.azure.config import AzureCtx
+from azure_tools.auth import AzureAuthentication
+
+def initialize_agent(service_type):
+    """Initialize the selected agent type."""
+    try:
+        if service_type == "GitHub":
+            if "github_agent" not in st.session_state:
+                st.session_state.github_agent = None
+            st.session_state.selected_service = "GitHub"
+            st.session_state.agent_initialized = True
+            return True
+        elif service_type == "Azure":
+            if "azure_ctx" not in st.session_state:
+                auth = AzureAuthentication()
+                st.session_state.azure_ctx = AzureCtx(auth=auth)
+            st.session_state.selected_service = "Azure"
+            st.session_state.agent_initialized = True
+            return True
+        else:
+            return False
+    except Exception as e:
+        st.error(f"Failed to initialize {service_type} agent: {e}")
+        return False
+
+def is_agent_initialized():
+    """Check if an agent is initialized."""
+    return st.session_state.get("agent_initialized", False)
+
+def get_agent_response(prompt):
+    """Get response from the initialized agent."""
+    service_type = st.session_state.get("selected_service")
+    
+    if service_type == "GitHub":
+        return get_github_response(prompt)
+    elif service_type == "Azure":
+        return get_azure_response(prompt)
+    else:
+        raise ValueError(f"Unknown service type: {service_type}")
+
+def get_github_response(prompt):
+    """Get response from GitHub agent."""
+    async def get_response():
+        async with GitHubAgent() as github_agent:
+            # Get chat history from session state
+            chat_history = st.session_state.get("chat_history", [])
+            return await github_agent.get_response(prompt, chat_history)
+    
+    return asyncio.run(get_response())
+
+def get_azure_response(prompt):
+    """Get response from Azure agent."""
+    azure_ctx = st.session_state.get("azure_ctx")
+    result, _ = asyncio.run(run_triage_agent(prompt, azure_ctx))
+    return result
 
 def main():
     st.set_page_config(
@@ -226,12 +283,11 @@ def main():
         if selected_service:
             if st.button("🚀 Initialize Agent", type="primary"):
                 with st.spinner(f"Initializing {selected_service} agent..."):
-                    try:
-                        initialize_agent()
+                    if initialize_agent(selected_service):
                         st.success(f"✅ {selected_service} agent initialized successfully!")
                         st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Failed to initialize {selected_service} agent: {e}")
+                    else:
+                        st.error(f"❌ Failed to initialize {selected_service} agent")
         
         # Status indicator
         st.markdown("### 📊 Agent Status")
@@ -261,9 +317,15 @@ def main():
         Select your service above to get started.
         """)
     
-    # Main chat interface
+    # Initialize session state
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+    if "agent_initialized" not in st.session_state:
+        st.session_state.agent_initialized = False
+    if "selected_service" not in st.session_state:
+        st.session_state.selected_service = None
     
     # Display chat messages
     for message in st.session_state.messages:
@@ -289,6 +351,13 @@ def main():
                         response = get_agent_response(prompt)
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
+                        
+                        # Update chat history for GitHub agent
+                        if st.session_state.get("selected_service") == "GitHub":
+                            st.session_state.chat_history.append({
+                                "user": prompt,
+                                "assistant": response
+                            })
                 except Exception as e:
                     error_msg = f"Error getting response: {str(e)}"
                     st.error(error_msg)

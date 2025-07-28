@@ -48,7 +48,7 @@ You will be expect to ask questions related to Github
 """
 
 async def main():
-    """Demonstrate the ADF Linked Services agent with MCP server."""
+    """Interactive GitHub agent with MCP server."""
     
     # MCP server parameters
     params = {"command": "docker", 
@@ -61,19 +61,52 @@ async def main():
     async with MCPServerStdio(params=params, client_session_timeout_seconds=240) as mcp_server:
         print(f"MCP server started in {time.time() - now} seconds")
         agent = Agent(
-            name="azure key vault specialist", 
+            name="github specialist", 
             instructions=instructions, 
             model=model, 
             mcp_servers=[mcp_server]
         )
         
-        with trace("github_mcp_test"):
-            print("\n=== GITHUB Agent (MCP) Demo ===\n")
-            request = "my username is wqeqwqeq, for flask_auto_search repo, any branch has merged into master and doesn't have any commit for 90 days?"
-            result = await Runner.run(agent, request)
-            print(f"\nResponse: {result.final_output}\n")
-            
-    print("\n=== Demo Complete ===\n")
+        print("\n=== GITHUB Agent (MCP) Interactive Mode ===")
+        print("Type 'quit' or 'exit' to end the conversation\n")
+        
+        conversation_history = []
+        
+        while True:
+            try:
+                user_input = input("User: ").strip()
+                if user_input.lower() in ['quit', 'exit', 'q']:
+                    break
+                if not user_input:
+                    continue
+                
+                # Build conversation context with history
+                if conversation_history:
+                    context = "Previous conversation:\n"
+                    for msg in conversation_history[-10:]:  # Keep last 10 exchanges
+                        context += f"User: {msg['user']}\nAssistant: {msg['assistant']}\n\n"
+                    context += f"Current question: {user_input}"
+                    full_input = context
+                else:
+                    full_input = user_input
+                    
+                with trace("github_mcp_interactive"):
+                    result = await Runner.run(agent, full_input)
+                    print(f"Assistant: {result.final_output}\n")
+                    
+                    # Store conversation history
+                    conversation_history.append({
+                        'user': user_input,
+                        'assistant': result.final_output
+                    })
+                    
+            except KeyboardInterrupt:
+                print("\nGoodbye!")
+                break
+            except Exception as e:
+                print(f"Error: {e}\n")
+                
+    print("\n=== Session Complete ===\n")
 
 # %%
 asyncio.run(main())
