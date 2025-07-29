@@ -6,6 +6,7 @@ from DAPEAgent.azure.triage_agent import run_triage_agent
 from DAPEAgent.azure.config import AzureCtx
 from DAPEAgent.utils import extract_token_usage
 from azure_tools.auth import AzureAuthentication
+from DAPEAgent.azure_devops.ado_agent import ADOAgent
 
 # set up mlflow
 import mlflow
@@ -45,6 +46,12 @@ def initialize_agent(service_type):
             st.session_state.selected_service = "Azure"
             st.session_state.agent_initialized = True
             return True
+        elif service_type == "Azure DevOps":
+            if "ado_agent" not in st.session_state:
+                st.session_state.ado_agent = None
+            st.session_state.selected_service = "Azure DevOps"
+            st.session_state.agent_initialized = True
+            return True
         else:
             return False
     except Exception as e:
@@ -63,6 +70,8 @@ def get_agent_response(prompt):
         return get_github_response(prompt)
     elif service_type == "Azure":
         return get_azure_response(prompt)
+    elif service_type == "Azure DevOps":
+        return get_ado_response(prompt)
     else:
         raise ValueError(f"Unknown service type: {service_type}")
 
@@ -102,6 +111,16 @@ def get_azure_response(prompt):
     
     result = asyncio.run(run_triage_agent(full_input, azure_ctx))
     return result
+
+def get_ado_response(prompt):
+    """Get response from Azure DevOps agent."""
+    async def get_response():
+        async with ADOAgent() as ado_agent:
+            # Get chat history from session state
+            chat_history = st.session_state.get("chat_history", [])
+            return await ado_agent.get_response(prompt, chat_history)
+    
+    return asyncio.run(get_response())
 
 def main():
     st.set_page_config(
@@ -432,8 +451,8 @@ def main():
                             with col4:
                                 st.metric("Total Tokens", token_usage['total_tokens'])
                         
-                        # Update chat history for both GitHub and Azure agents
-                        if st.session_state.get("selected_service") in ["GitHub", "Azure"]:
+                        # Update chat history for GitHub, Azure, and Azure DevOps agents
+                        if st.session_state.get("selected_service") in ["GitHub", "Azure", "Azure DevOps"]:
                             st.session_state.chat_history.append({
                                 "user": prompt,
                                 "assistant": response
