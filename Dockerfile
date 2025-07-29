@@ -23,7 +23,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 COPY DAPEAgent/ ./DAPEAgent
 COPY azure_tools/ ./azure_tools
-COPY streamlit_ui.py .
+COPY main_ui.py .
 
 # 5️⃣ sync everything (dependencies + project)
 RUN uv sync --frozen
@@ -66,7 +66,8 @@ WORKDIR /app
 # copy *only* the code we need (tests & examples ignored by .dockerignore)
 COPY DAPEAgent/ ./DAPEAgent
 COPY azure_tools/ ./azure_tools
-COPY streamlit_ui.py .
+COPY assets/ ./assets
+COPY main_ui.py .
 COPY .env .
 COPY entry_point.sh .
 COPY nginx.conf /etc/nginx/nginx.conf

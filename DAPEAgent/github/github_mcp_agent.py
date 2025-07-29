@@ -42,7 +42,7 @@ class GitHubAgent:
         
         # Setup MCP server
         params = {
-            "command": "./github-mcp-server",
+            "command": "./assets/github-mcp-server",
             "args": ["stdio"],
             "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": os.getenv("GITHUB_PAT")}
         }
