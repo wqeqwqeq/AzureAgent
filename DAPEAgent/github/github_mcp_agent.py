@@ -42,18 +42,13 @@ class GitHubAgent:
         
         # Setup MCP server
         params = {
-            "command": "docker", 
-            "args": [
-                "run", "-i", "--rm", 
-                "-e", f"GITHUB_PERSONAL_ACCESS_TOKEN={os.getenv('GITHUB_PAT')}", 
-                "-e", "GITHUB_READ_ONLY=1", 
-                "ghcr.io/github/github-mcp-server"
-            ]
+            "command": "./github-mcp-server",
+            "args": ["stdio"],
+            "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": os.getenv("GITHUB_PAT")}
         }
         
         self.mcp_server = MCPServerStdio(params=params, client_session_timeout_seconds=240)
         await self.mcp_server.__aenter__()
-        
         # Create agent with instructions
         instructions = """You are a Github specialist with access to Github mcp server.
 
@@ -81,7 +76,7 @@ You will be expected to ask questions related to Github"""
         self.model = None
         self._initialized = False
     
-    async def get_response(self, user_input: str, chat_history: Optional[List[Dict[str, str]]] = None) -> str:
+    async def get_response(self, user_input: str, chat_history: Optional[List[Dict[str, str]]] = None):
         """Get response from GitHub agent with optional chat history context."""
         if not self._initialized:
             await self.initialize()
@@ -101,7 +96,7 @@ You will be expected to ask questions related to Github"""
         
         with trace("github_mcp_agent"):
             result = await Runner.run(self.agent, full_input)
-            return result.final_output
+            return result
     
     async def __aenter__(self):
         await self.initialize()
@@ -134,13 +129,13 @@ async def main():
                 if not user_input:
                     continue
                 
-                response = await github_agent.get_response(user_input, conversation_history)
-                print(f"Assistant: {response}\n")
+                result = await github_agent.get_response(user_input, conversation_history)
+                print(f"Assistant: {result.final_output}\n")
                 
                 # Store conversation history
                 conversation_history.append({
                     'user': user_input,
-                    'assistant': response
+                    'assistant': result.final_output
                 })
                 
             except KeyboardInterrupt:

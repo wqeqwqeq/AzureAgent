@@ -4,7 +4,20 @@ import streamlit as st
 from DAPEAgent.github.github_mcp_agent import GitHubAgent
 from DAPEAgent.azure.triage_agent import run_triage_agent
 from DAPEAgent.azure.config import AzureCtx
+from DAPEAgent.utils import extract_token_usage
 from azure_tools.auth import AzureAuthentication
+
+# set up mlflow
+import mlflow
+from mlflow.openai._agent_tracer import add_mlflow_trace_processor
+
+# Configure MLflow
+# mlflow.openai.autolog() #type: ignore
+mlflow.openai.autolog(log_traces=False) #type: ignore
+add_mlflow_trace_processor()             
+mlflow.set_tracking_uri("http://127.0.0.1:5000")
+mlflow.set_experiment("OpenAI-Agents-only")
+
 
 def initialize_agent(service_type):
     """Initialize the selected agent type."""
@@ -87,7 +100,7 @@ def get_azure_response(prompt):
     else:
         full_input = prompt
     
-    result, _ = asyncio.run(run_triage_agent(full_input, azure_ctx))
+    result = asyncio.run(run_triage_agent(full_input, azure_ctx))
     return result
 
 def main():
@@ -394,9 +407,30 @@ def main():
                     elif not is_agent_initialized():
                         st.warning(f"Please initialize the {selected_service} agent first using the sidebar button.")
                     else:
-                        response = get_agent_response(prompt)
+                        # Get agent result
+                        result = get_agent_response(prompt)
+                        response = result.final_output
+                        
+                        # Display response
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
+                        
+                        # Extract and display token usage for both GitHub and Azure
+                        token_usage = extract_token_usage(result)
+                        with st.expander("📊 Token Usage Details"):
+                            col1, col2, col3, col4 = st.columns(4)
+                            
+                            with col1:
+                                st.metric("Input Tokens", token_usage['input_tokens'])
+                            
+                            with col2:
+                                st.metric("Output Tokens", token_usage['output_tokens'])
+                            
+                            with col3:
+                                st.metric("Cache Tokens", token_usage['cache_tokens'])
+                            
+                            with col4:
+                                st.metric("Total Tokens", token_usage['total_tokens'])
                         
                         # Update chat history for both GitHub and Azure agents
                         if st.session_state.get("selected_service") in ["GitHub", "Azure"]:

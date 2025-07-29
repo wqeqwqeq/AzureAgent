@@ -71,31 +71,4 @@ async def run_triage_agent(question: str, azure_ctx: AzureCtx):
     )
     await azure_mcp_server.cleanup()
     
-    # Get token usage from OpenAI raw responses
-    try:
-        total_tokens = 0
-        input_tokens = 0
-        output_tokens = 0
-        cache_tokens = 0
-        
-        for response in result.raw_responses:
-            total_tokens += response.usage.total_tokens
-            input_tokens += response.usage.input_tokens
-            output_tokens += response.usage.output_tokens
-            cache_tokens += response.usage.input_tokens_details.cached_tokens
-        
-        token_usage = {
-            'input_tokens': input_tokens,
-            'output_tokens': output_tokens,
-            'cache_tokens': cache_tokens,
-            'total_tokens': total_tokens
-        }
-    except Exception as e:
-        token_usage = {
-            'input_tokens': 0,
-            'output_tokens': 0,
-            'cache_tokens': 0,
-            'total_tokens': 0
-        }
-    
-    return result.final_output, token_usage
+    return result
