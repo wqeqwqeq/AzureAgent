@@ -7,6 +7,8 @@ from DAPEAgent.azure.config import AzureCtx
 from DAPEAgent.utils import extract_token_usage
 from azure_tools.auth import AzureAuthentication
 from DAPEAgent.azure_devops.ado_agent import ADOAgent
+from snowflake_agent import validate
+from snowflake_connector import snowflake_conn
 
 # set up mlflow
 import mlflow
@@ -52,6 +54,13 @@ def initialize_agent(service_type):
             st.session_state.selected_service = "Azure DevOps"
             st.session_state.agent_initialized = True
             return True
+        elif service_type == "Snowflake":
+            if "snowflake_conn" not in st.session_state:
+                conn = snowflake_conn()
+                st.session_state.snowflake_conn = conn
+            st.session_state.selected_service = "Snowflake"
+            st.session_state.agent_initialized = True
+            return True
         else:
             return False
     except Exception as e:
@@ -72,6 +81,8 @@ def get_agent_response(prompt):
         return get_azure_response(prompt)
     elif service_type == "Azure DevOps":
         return get_ado_response(prompt)
+    elif service_type == "Snowflake":
+        return get_snowflake_response(prompt)
     else:
         raise ValueError(f"Unknown service type: {service_type}")
 
@@ -121,6 +132,11 @@ def get_ado_response(prompt):
             return await ado_agent.get_response(prompt, chat_history)
     
     return asyncio.run(get_response())
+
+def get_snowflake_response(prompt):
+    """Get response from Snowflake agent."""
+    conn = st.session_state.get("snowflake_conn")
+    return validate(conn, prompt)
 
 def main():
     st.set_page_config(
@@ -428,31 +444,36 @@ def main():
                     else:
                         # Get agent result
                         result = get_agent_response(prompt)
-                        response = result.final_output
+                        if st.session_state.get("selected_service") == "Snowflake":
+                            # For Snowflake, result is already in text format
+                            response = result
+                        else:
+                            response = result.final_output
                         
                         # Display response
                         st.markdown(response)
                         st.session_state.messages.append({"role": "assistant", "content": response})
                         
-                        # Extract and display token usage for both GitHub and Azure
-                        token_usage = extract_token_usage(result)
-                        with st.expander("📊 Token Usage Details"):
-                            col1, col2, col3, col4 = st.columns(4)
-                            
-                            with col1:
-                                st.metric("Input Tokens", token_usage['input_tokens'])
-                            
-                            with col2:
-                                st.metric("Output Tokens", token_usage['output_tokens'])
-                            
-                            with col3:
-                                st.metric("Cache Tokens", token_usage['cache_tokens'])
-                            
-                            with col4:
-                                st.metric("Total Tokens", token_usage['total_tokens'])
+                        # Extract and display token usage (skip for Snowflake as it doesn't have token usage)
+                        if st.session_state.get("selected_service") != "Snowflake":
+                            token_usage = extract_token_usage(result)
+                            with st.expander("📊 Token Usage Details"):
+                                col1, col2, col3, col4 = st.columns(4)
+                                
+                                with col1:
+                                    st.metric("Input Tokens", token_usage['input_tokens'])
+                                
+                                with col2:
+                                    st.metric("Output Tokens", token_usage['output_tokens'])
+                                
+                                with col3:
+                                    st.metric("Cache Tokens", token_usage['cache_tokens'])
+                                
+                                with col4:
+                                    st.metric("Total Tokens", token_usage['total_tokens'])
                         
-                        # Update chat history for GitHub, Azure, and Azure DevOps agents
-                        if st.session_state.get("selected_service") in ["GitHub", "Azure", "Azure DevOps"]:
+                        # Update chat history for GitHub, Azure, Azure DevOps, and Snowflake agents
+                        if st.session_state.get("selected_service") in ["GitHub", "Azure", "Azure DevOps", "Snowflake"]:
                             st.session_state.chat_history.append({
                                 "user": prompt,
                                 "assistant": response
